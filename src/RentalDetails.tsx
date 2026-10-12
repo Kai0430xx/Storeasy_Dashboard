@@ -33,10 +33,10 @@ export default function RentalDetails({
       {type !== "exit" && (
         <div className="preview-counts rental-summary">
           {Object.entries({
-            monthly: "月租",
-            quarterly: "季租",
-            halfYear: "半年租",
-            yearly: "年租",
+            monthly: "月繳",
+            quarterly: "季繳",
+            halfYear: "半年繳",
+            yearly: "年繳",
             other: "其他租期",
             unknown: "租期未記錄",
           }).map(([key, label]) => (
@@ -48,7 +48,7 @@ export default function RentalDetails({
       )}
 
       <p className="hint">
-        按起訖日期辨識 1、3、6、12 個月租期。
+        依起訖日期分類：1–2 個月為月繳，3–5 個月為季繳，6–11 個月為半年繳，12 個月以上為年繳；不足 1 個月列為其他租期。
         KPI 匯入只有彙總，未提供倉位明細；
         舊異動未記錄租期時不使用現況推算歷史分類。
       </p>
