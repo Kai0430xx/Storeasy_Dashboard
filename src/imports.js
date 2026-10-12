@@ -1,3 +1,4 @@
+import { kpiAmounts } from "./pricing.js";
 import ExcelJS from "exceljs";
 
 export async function workbook(buffer) {
@@ -208,6 +209,7 @@ export function parseKpi(book) {
         month:
           `${year}-` +
           String(month).padStart(2, "0"),
+        amounts: kpiAmounts(rows, month),
         total: totalValue,
         rented: rentedValue,
         new: num(fresh, month),
