@@ -95,19 +95,26 @@ export function kpiAmounts(rows, column) {
 
     const raw = row[column];
 
-    if (
-      raw === null ||
-      raw === undefined ||
-      raw === ""
-    ) {
+    if (raw === null || raw === undefined || raw === "") {
       continue;
     }
 
-    const value = Number(raw);
+    const text = String(raw).normalize("NFKC").trim();
 
-    if (!Number.isFinite(value)) {
+    if (!text || /^(?:-|—|–|N\/A)$/i.test(text)) {
+      continue;
+    }
+
+    const cleaned = text.replace(
+      /NT\$|NTD|TWD|新臺幣|新台幣|元|[$,\s]/gi,
+      ""
+    );
+
+    const value = Number(cleaned);
+
+    if (!cleaned || !Number.isFinite(value)) {
       throw new Error(
-        `KPI 金額不合法：${label}`
+        `KPI 金額不合法：${label}（${text}）`
       );
     }
 
