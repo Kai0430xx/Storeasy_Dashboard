@@ -338,6 +338,19 @@ service cloud.firestore {
       }
 
       match /months/{month} {
+        function keepsAmounts() {
+          return
+            !exists(
+              /databases/$(database)/documents/branches/$(id)/months/$(month)
+            )
+            || !('amounts' in resource.data)
+            || resource.data.amounts.size() == 0
+            || (
+              'amounts' in request.resource.data
+              && request.resource.data.amounts
+                == resource.data.amounts
+            );
+        }
         allow read: if branchAccess(id);
 
         allow create, update: if branchEdit(id)
@@ -348,9 +361,8 @@ service cloud.firestore {
           && month.matches(
             '[0-9]{4}-(0[1-9]|1[0-2])'
           )
-          && request.resource.data.source in [
-            'live', 'import'
-          ]
+          && keepsAmounts()
+          && request.resource.data.source in ['live','import']
           && optionalCount(request.resource.data, 'total')
           && optionalCount(request.resource.data, 'rented')
           && optionalCount(request.resource.data, 'new')
