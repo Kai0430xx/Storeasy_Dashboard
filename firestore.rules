@@ -1,0 +1,386 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function profile() {
+      return get(
+        /databases/$(database)/documents/users/$(request.auth.uid)
+      ).data;
+    }
+
+    function globalAccess() {
+      return signedIn()
+        && profile().role in ['admin', 'supervisor'];
+    }
+
+    function branchAccess(id) {
+      return globalAccess()
+        || (
+          signedIn()
+          && profile().role in ['manager', 'employee']
+          && id in profile().branchIds
+        );
+    }
+
+    function branchEdit(id) {
+      return globalAccess()
+        || (
+          signedIn()
+          && profile().role == 'manager'
+          && id in profile().branchIds
+        );
+    }
+
+    function unlocked(id) {
+      return !(
+        'importing' in get(
+          /databases/$(database)/documents/branches/$(id)
+        ).data
+      );
+    }
+
+    function ownImport(id) {
+      let b = get(
+        /databases/$(database)/documents/branches/$(id)
+      ).data;
+
+      return 'importing' in b
+        && b.importing.by == request.auth.uid;
+    }
+
+    function positive(n) {
+      return n is number && n >= 0;
+    }
+
+    function optionalCount(d, k) {
+      return !(k in d)
+        || d[k] == null
+        || (d[k] is int && d[k] >= 0);
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn()
+        && (
+          request.auth.uid == uid
+          || globalAccess()
+        );
+
+      allow create: if signedIn()
+        && uid == request.auth.uid
+        && request.resource.data.keys().hasOnly([
+          'username',
+          'role',
+          'branchIds',
+          'mustChangePassword',
+          'createdAt'
+        ])
+        && request.resource.data.username is string
+        && request.resource.data.username.matches(
+          '[a-zA-Z0-9_-]{2,32}'
+        )
+        && request.auth.token.email
+          == request.resource.data.username.lower()
+            + '@accounts.storeasy.invalid'
+        && request.resource.data.role == 'pending'
+        && request.resource.data.branchIds == []
+        && request.resource.data.mustChangePassword is bool
+        && request.resource.data.createdAt == request.time;
+
+      allow update: if signedIn()
+        && (
+          (
+            uid == request.auth.uid
+            && request.resource.data.diff(
+              resource.data
+            ).affectedKeys().hasOnly([
+              'mustChangePassword'
+            ])
+            && request.resource.data.mustChangePassword == false
+          )
+          || (
+            uid != request.auth.uid
+            && globalAccess()
+            && (
+              profile().role == 'admin'
+              || (
+                !(resource.data.role in [
+                  'admin', 'supervisor'
+                ])
+                && !(request.resource.data.role in [
+                  'admin', 'supervisor'
+                ])
+              )
+            )
+            && request.resource.data.diff(
+              resource.data
+            ).affectedKeys().hasOnly([
+              'role',
+              'branchIds',
+              'updatedBy',
+              'updatedAt'
+            ])
+            && request.resource.data.role in [
+              'admin',
+              'supervisor',
+              'manager',
+              'employee',
+              'pending'
+            ]
+            && request.resource.data.branchIds is list
+            && request.resource.data.branchIds.size() <= 100
+            && request.resource.data.updatedBy == request.auth.uid
+            && request.resource.data.updatedAt == request.time
+          )
+        );
+
+      allow delete: if false;
+    }
+
+    match /branches/{id} {
+      function balanced() {
+        let d = request.resource.data;
+
+        return d.name is string
+          && d.name.size() > 0
+          && d.name.size() <= 80
+          && d.total is int
+          && d.rented is int
+          && d.vacant is int
+          && d.total >= 0
+          && d.rented >= 0
+          && d.vacant >= 0
+          && d.total == d.rented + d.vacant
+          && d.revision is int
+          && d.revision >= 0;
+      }
+
+      allow read: if branchAccess(id);
+
+      allow create: if globalAccess()
+        && balanced()
+        && request.resource.data.total == 0
+        && request.resource.data.revision == 0;
+
+      allow update: if branchEdit(id)
+        && balanced()
+        && request.resource.data.revision >= resource.data.revision
+        && (
+          !('importing' in resource.data)
+          || resource.data.importing.by == request.auth.uid
+          || request.time.toMillis()
+            - resource.data.importing.startedAt > 600000
+        );
+
+      allow delete: if false;
+
+      match /units/{code} {
+        function validUnit() {
+          let u = request.resource.data;
+
+          return u.code == code
+            && u.status in ['rented', 'vacant']
+            && u.missing is bool
+            && positive(u.volume)
+            && positive(u.price)
+            && positive(u.unitPrice)
+            && u.note is string
+            && u.note.size() <= 500
+            && u.dimensions is string
+            && u.dimensions.size() <= 100;
+        }
+
+        function eventMatches() {
+          let u = request.resource.data;
+          let e = getAfter(
+            /databases/$(database)/documents/branches/$(id)/events/$(u.lastEventId)
+          ).data;
+
+          return e.code == code
+            && e.createdBy == request.auth.uid
+            && e.createdAt == request.time
+            && !e.voided
+            && (
+              (
+                e.type == 'new'
+                && resource.data.status == 'vacant'
+                && u.status == 'rented'
+              )
+              || (
+                e.type == 'exit'
+                && resource.data.status == 'rented'
+                && u.status == 'vacant'
+              )
+            );
+        }
+
+        function undoMatches() {
+          let e = getAfter(
+            /databases/$(database)/documents/branches/$(id)/events/$(resource.data.lastEventId)
+          ).data;
+
+          return e.voided
+            && e.voidedBy == request.auth.uid
+            && e.voidedAt == request.time
+            && request.resource.data.lastEventId
+              == e.previousEventId
+            && (
+              (
+                e.type == 'new'
+                && request.resource.data.status == 'vacant'
+              )
+              || (
+                e.type == 'exit'
+                && request.resource.data.status == 'rented'
+              )
+            );
+        }
+
+        allow read: if branchAccess(id);
+
+        allow create: if branchEdit(id)
+          && validUnit()
+          && (
+            ownImport(id)
+            || (
+              unlocked(id)
+              && request.resource.data.status == 'vacant'
+              && request.resource.data.lastEventId == null
+            )
+          );
+
+        allow update: if branchEdit(id)
+          && validUnit()
+          && (
+            ownImport(id)
+            || (
+              unlocked(id)
+              && (
+                request.resource.data.status == resource.data.status
+                || eventMatches()
+                || undoMatches()
+              )
+            )
+          );
+
+        allow delete: if branchEdit(id)
+          && unlocked(id)
+          && resource.data.status == 'vacant';
+      }
+
+      match /events/{eventId} {
+        allow read: if branchAccess(id);
+
+        allow create: if branchEdit(id)
+          && unlocked(id)
+          && request.resource.data.type in [
+            'new', 'renew', 'exit'
+          ]
+          && request.resource.data.date is string
+          && request.resource.data.date.matches(
+            '[0-9]{4}-[0-9]{2}-[0-9]{2}'
+          )
+          && request.resource.data.month.matches(
+            '[0-9]{4}-(0[1-9]|1[0-2])'
+          )
+          && request.resource.data.activities is list
+          && request.resource.data.activities.size() <= 30
+          && request.resource.data.createdBy == request.auth.uid
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.voided == false
+          && getAfter(
+            /databases/$(database)/documents/branches/$(id)/units/$(request.resource.data.code)
+          ).data.lastEventId == eventId;
+
+        allow update: if branchEdit(id)
+          && unlocked(id)
+          && !resource.data.voided
+          && request.resource.data.voided
+          && request.resource.data.diff(
+            resource.data
+          ).affectedKeys().hasOnly([
+            'voided',
+            'voidedBy',
+            'voidedAt'
+          ])
+          && request.resource.data.voidedBy == request.auth.uid
+          && request.resource.data.voidedAt == request.time
+          && get(
+            /databases/$(database)/documents/branches/$(id)/units/$(resource.data.code)
+          ).data.lastEventId == eventId
+          && getAfter(
+            /databases/$(database)/documents/branches/$(id)/units/$(resource.data.code)
+          ).data.lastEventId == resource.data.previousEventId;
+
+        allow delete: if false;
+      }
+
+      match /activities/{activityId} {
+        allow read: if branchAccess(id);
+
+        allow create, update: if branchEdit(id)
+          && request.resource.data.month.matches(
+            '[0-9]{4}-(0[1-9]|1[0-2])'
+          )
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.name.size() <= 100
+          && request.resource.data.description is string
+          && request.resource.data.description.size() <= 1000
+          && request.resource.data.archived is bool
+          && request.resource.data.updatedBy == request.auth.uid
+          && request.resource.data.updatedAt == request.time;
+
+        allow delete: if false;
+      }
+
+      match /months/{month} {
+        allow read: if branchAccess(id);
+
+        allow create, update: if branchEdit(id)
+          && (
+            unlocked(id)
+            || ownImport(id)
+          )
+          && month.matches(
+            '[0-9]{4}-(0[1-9]|1[0-2])'
+          )
+          && request.resource.data.source in [
+            'live', 'import'
+          ]
+          && optionalCount(request.resource.data, 'total')
+          && optionalCount(request.resource.data, 'rented')
+          && optionalCount(request.resource.data, 'new')
+          && optionalCount(request.resource.data, 'renew')
+          && optionalCount(request.resource.data, 'exit')
+          && (
+            !('total' in request.resource.data)
+            || !('rented' in request.resource.data)
+            || request.resource.data.rented
+              <= request.resource.data.total
+          );
+
+        allow delete: if branchEdit(id)
+          && unlocked(id)
+          && resource.data.source == 'import';
+      }
+
+      match /imports/{importId} {
+        allow read: if branchAccess(id);
+
+        allow create: if branchEdit(id)
+          && request.resource.data.by == request.auth.uid
+          && request.resource.data.createdAt == request.time;
+
+        allow update, delete: if false;
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
