@@ -1,3 +1,4 @@
+import { removeActivity } from "./remove-activity";
 import { parseLease } from "./lease.js";
 import { removeImport, sourceFiles } from "./import-actions";
 
@@ -520,6 +521,9 @@ export async function execute(
       return {};
     }
 
+    case "removeActivity": {
+      return removeActivity(data);
+    }
     case "voidEvent": {
       const branchDoc = branch(data.branchId);
 
@@ -605,6 +609,10 @@ export async function execute(
           );
         }
 
+        if (!Number.isInteger(monthSnapshot.data()?.[event.type]) || monthSnapshot.data()![event.type] < 1)
+          throw new Error("該月份異動數量與紀錄不一致，無法撤銷；請核對是否曾修改統計資料");
+        if ((event.type === "new" && branchSnapshot.data()!.rented < 1) || (event.type === "exit" && branchSnapshot.data()!.vacant < 1))
+          throw new Error("倉位現況與異動紀錄不一致，無法撤銷");
         const delta =
           event.type === "new"
             ? -1

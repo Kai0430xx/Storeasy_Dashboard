@@ -32,7 +32,13 @@ if (import.meta.env.VITE_USE_EMULATORS === "true") {
 
 export async function call(name: string, data: unknown) {
   const { execute } = await import("./api");
-  return execute(name, data);
+  try {
+    return await execute(name, data);
+  } catch (error: any) {
+    if (error?.code === "permission-denied" && ["voidEvent", "removeActivity"].includes(name))
+      throw new Error("Firebase 規則拒絕此操作。請確認最新 firestore.rules 已在 Firebase 發布；若已發布，請核對該倉位與月份統計是否一致。");
+    throw error;
+  }
 }
 
 export const loginEmail = (username: string) => {

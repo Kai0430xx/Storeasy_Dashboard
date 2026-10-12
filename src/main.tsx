@@ -1,3 +1,4 @@
+import RentalDetails from "./RentalDetails";
 import { leaseStatus } from "./lease.js";
 import { compareUnits } from "./unit-view.js";
 import ActivityUsage from "./ActivityUsage";
@@ -230,7 +231,7 @@ function App() {
         ["months", collection(db, "branches", branch.id, "months")],
       ];
 
-      if (page === "units" || page === "imports" || page === "activities") {
+      if (page === "units" || page === "imports" || page === "activities" || page === "dashboard") {
         sources.push([
           "units",
           collection(db, "branches", branch.id, "units"),
@@ -811,10 +812,7 @@ function App() {
                           ["renew", current.renew],
                           ["exit", current.exit],
                         ].map(([key, value]: any) => (
-                          <div
-                            className="flow-row"
-                            key={key}
-                          >
+                          <button type="button" className="flow-row" key={key} aria-label={`查看${types[key]}明細`} onClick={() => setModal({kind:"rentalDetails",type:key,month,total:value})}>
                             <div
                               className={`flow-icon ${key}`}
                             >
@@ -827,7 +825,7 @@ function App() {
                               {value ?? "—"}
                               <small> 筆</small>
                             </strong>
-                          </div>
+                          </button>
                         ))}
                       </div>
 
@@ -939,12 +937,13 @@ function App() {
                           使用次數不等於承租筆數。
                         </p>
                       </div>
+                      {canWrite && <button className="text-button danger" aria-label="刪除活動" title="刪除活動設定及使用紀錄" onClick={() => setModal({kind:"chooseActivityDelete"})}><X size={20}/></button>}
                     </div>
 
                     <div className="activity-summary">
                       {activities
                         .filter((activity) =>
-                          activity.month === month,
+                          activity.month === month && !activity.deleting,
                         )
                         .map((activity) => {
                           const count = events.filter(
@@ -960,9 +959,7 @@ function App() {
                             <div
                               key={activity.branchId + activity.id}
                             >
-                              <span>
-                                {activity.branchName} · {activity.name}
-                              </span>
+                              <button className="text-button" onClick={() => setModal({kind:"activityUsage",activity,month})}>{activity.branchName} · {activity.name}</button>
                               <strong>
                                 {count}<small> 次</small>
                               </strong>
@@ -1003,7 +1000,7 @@ function App() {
                       <option value="active">租期內</option>
                       <option value="expiring">即將到期</option>
                       <option value="overdue">已逾期</option>
-                      <option value="upcoming">尚未起租</option>
+                      
                       <option value="unknown">租期未提供</option>
                       <option value="vacant">空倉</option>
                       <option value="missing">清單中消失</option>
@@ -1578,7 +1575,7 @@ function App() {
             role="dialog"
             aria-modal="true"
             className={`modal ${
-              ["inventory", "kpi", "activityUsage"].includes(modal.kind) ? "wide"
+              ["inventory", "kpi", "activityUsage", "rentalDetails"].includes(modal.kind) ? "wide"
                 : ""
             }`}
           >
@@ -1590,6 +1587,9 @@ function App() {
                   event: `登記${types[modal.type]}`,
                   activity: "活動設定",
                       activityUsage: "活動使用明細",
+                  rentalDetails: "承租動態明細",
+                  chooseActivityDelete: "選擇要刪除的活動",
+                  removeActivity: "刪除活動與使用紀錄",
                   inventory: "匯入倉位現況",
                   kpi: "匯入歷史 KPI",
                   assign: "指派角色與據點",
@@ -1690,6 +1690,19 @@ function App() {
               </form>
             )}
 
+            {modal.kind === "rentalDetails" && <RentalDetails type={modal.type} month={modal.month} total={modal.total} events={events} units={units} />}
+            {modal.kind === "chooseActivityDelete" && <>
+              <p>請選擇要刪除的活動，下一步會確認刪除範圍。</p>
+              {activities.filter(activity => activity.month === month).map(activity => <div className="activity-delete-row" key={`${activity.branchId}/${activity.id}`}>
+                <span>{activity.branchName} · {activity.name}{activity.deleting ? "（刪除未完成，可重試）" : ""}</span>
+                <button className="text-button danger" onClick={() => setModal({kind:"removeActivity",activity})}>刪除</button>
+              </div>)}
+            </>}
+            {modal.kind === "removeActivity" && <>
+              <p>刪除「{modal.activity.branchName} · {modal.activity.name}」？</p>
+              <p>此活動設定及所有月份的活動使用連結會刪除；承租、續約、退租紀錄與統計數量保留。此操作不會刪除其他活動。</p>
+              <button className="primary danger" disabled={busy} onClick={() => run(() => call("removeActivity",{branchId:modal.activity.branchId,activityId:modal.activity.id}),"活動及使用紀錄已刪除")}>確認刪除活動</button>
+            </>}
             {modal.kind === "activityUsage" && (
               <ActivityUsage activity={modal.activity} month={modal.month} events={events} units={units} />
             )}

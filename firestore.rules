@@ -260,8 +260,8 @@ service cloud.firestore {
               unlocked(id)
               && (
                 request.resource.data.status == resource.data.status
-                || eventMatches()
-                || undoMatches()
+                || (request.resource.data.lastEventId != null && eventMatches())
+                || (resource.data.lastEventId != null && undoMatches())
               )
             )
           );
@@ -272,6 +272,18 @@ service cloud.firestore {
       }
 
       match /events/{eventId} {
+        function removesActivity() {
+          let r = request.resource.data.activityRemoval;
+          let lock = get(/databases/$(database)/documents/branches/$(id)).data.importing;
+          let activity = get(/databases/$(database)/documents/branches/$(id)/activities/$(r.activity.id)).data;
+          return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['activities','activityRemoval'])
+            && request.resource.data.activities is list
+            && resource.data.activities.hasAny([r.activity])
+            && request.resource.data.activities == resource.data.activities.removeAll([r.activity])
+            && r.by == request.auth.uid && r.at == request.time && r.token == lock.token
+            && lock.operation == 'removeActivity' && lock.activityId == r.activity.id
+            && activity.deleting == true && activity.archived == true && activity.updatedBy == request.auth.uid;
+        }
         allow read: if branchAccess(id);
 
         allow create: if branchEdit(id)
@@ -295,7 +307,7 @@ service cloud.firestore {
             /databases/$(database)/documents/branches/$(id)/units/$(request.resource.data.code)
           ).data.lastEventId == eventId;
 
-        allow update: if branchEdit(id)
+        allow update: if (branchEdit(id)
           && unlocked(id)
           && !resource.data.voided
           && request.resource.data.voided
@@ -313,7 +325,7 @@ service cloud.firestore {
           ).data.lastEventId == eventId
           && getAfter(
             /databases/$(database)/documents/branches/$(id)/units/$(resource.data.code)
-          ).data.lastEventId == resource.data.previousEventId;
+          ).data.lastEventId == resource.data.previousEventId) || (branchEdit(id) && ownImport(id) && ('activityRemoval' in request.resource.data) && removesActivity());
 
         allow delete: if false;
       }
@@ -321,7 +333,7 @@ service cloud.firestore {
       match /activities/{activityId} {
         allow read: if branchAccess(id);
 
-        allow create, update: if branchEdit(id)
+        allow create, update: if branchEdit(id) && (unlocked(id) || ownImport(id))
           && request.resource.data.month.matches(
             '[0-9]{4}-(0[1-9]|1[0-2])'
           )
@@ -334,7 +346,9 @@ service cloud.firestore {
           && request.resource.data.updatedBy == request.auth.uid
           && request.resource.data.updatedAt == request.time;
 
-        allow delete: if false;
+        allow delete: if branchEdit(id) && ownImport(id) && resource.data.deleting == true
+          && get(/databases/$(database)/documents/branches/$(id)).data.importing.operation == 'removeActivity'
+          && get(/databases/$(database)/documents/branches/$(id)).data.importing.activityId == activityId;
       }
 
       match /months/{month} {

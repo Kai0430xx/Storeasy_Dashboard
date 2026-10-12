@@ -64,10 +64,6 @@ export function leaseStatus(unit, date = taipeiDate()) {
     return { key: "overdue", label: "已逾期", color: "red" };
   }
 
-  if (unit.leaseStart > date) {
-    return { key: "upcoming", label: "尚未起租", color: "blue" };
-  }
-
   const days = Math.round(
     (
       Date.parse(`${unit.leaseEnd}T00:00:00Z`) -

@@ -327,3 +327,26 @@ h1 { font-size: 30px; }
 }
 
 .badge.red { background: #fff0ec; color: #b42318; }
+
+button.flow-row {
+  width:100%;
+  text-align:left;
+  background:transparent;
+  border:0;
+  border-bottom:1px solid var(--border);
+  color:inherit;
+  cursor:pointer;
+}
+button.flow-row:hover { background:#f4f7fb; }
+.activity-delete-row {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  padding:12px 0;
+}
+.rental-summary {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+  gap:12px;
+}
