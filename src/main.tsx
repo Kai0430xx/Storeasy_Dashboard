@@ -2363,8 +2363,9 @@ function ImportForm({
                 await workbook(
                   await (form.get("vacant") as File).arrayBuffer(),
                 ),
+                undefined,
+                { requirePrice: false },
               ).map((unit: Row) => unit.code);
-
               const codes = new Set(
                 all.map((unit: Row) => unit.code),
               );
