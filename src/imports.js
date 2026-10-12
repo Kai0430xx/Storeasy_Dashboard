@@ -200,17 +200,13 @@ export function parseKpi(book) {
 
   for (const name of book.SheetNames) {
     const rows = book.Sheets[name];
+    const year = String(rows[0]?.[1] || name)
+      .match(/20\d{2}/)?.[0];
 
-    const year = String(
-      rows[0]?.[1] || name
-    ).match(/20\d{2}/)?.[0];
+    if (!year) continue;
 
-    if (!year) {
-      continue;
-    }
-
-    const find = (keyword) =>
-      rows.find((row) =>
+    const find = keyword =>
+      rows.find(row =>
         String(row[0] || "").includes(keyword)
       );
 
@@ -226,51 +222,58 @@ export function parseKpi(book) {
       "年約／續約"
     ].map(find);
 
-    const num = (row, index) => {
-      const value = row?.[index];
+    const num = (row, column) => {
+      const raw = row?.[column];
+      const text = String(raw ?? "")
+        .normalize("NFKC")
+        .trim();
 
-      if (
-        value === null ||
-        value === undefined ||
-        value === ""
-      ) {
+      if (!text || /^(?:-|—|–|N\/A)$/i.test(text)) {
         return null;
       }
 
-      return Number(value);
+      // 例如 23/31：23 為分項件數，31 為當月合計。
+      const split = renewRows.includes(row) &&
+        text.match(/^(\d+)\s*\/\s*(\d+)$/);
+
+      const value = Number(
+        split ? split[1] : text.replace(/,/g, "")
+      );
+
+      if (!Number.isInteger(value) || value < 0) {
+        throw new Error(
+          `${name} ${column}月「${row?.[0] || "數量"}」數值不合法：${text}`
+        );
+      }
+
+      return value;
     };
 
-    for (let month = 1; month <= 12; month++) {
-      const totalValue = num(total, month);
-      const rentedValue = num(rented, month);
+    for (let column = 1; column <= 12; column++) {
+      const totalValue = num(total, column);
+      const rentedValue = num(rented, column);
 
-      if (
-        totalValue === null &&
-        rentedValue === null
-      ) {
+      if (totalValue === null && rentedValue === null) {
         continue;
       }
 
       const renewValues = renewRows.map(
-        (row) => num(row, month)
+        row => num(row, column)
       );
 
       result.push({
         month:
           `${year}-` +
-          String(month).padStart(2, "0"),
-        amounts: kpiAmounts(rows, month),
+          String(column).padStart(2, "0"),
+
+        amounts: kpiAmounts(rows, column),
         total: totalValue,
         rented: rentedValue,
-        new: num(fresh, month),
-        exit: num(exit, month),
-        renew: renewValues.every(
-          (value) => value !== null
-        )
-          ? renewValues.reduce(
-              (sum, value) => sum + value,
-              0
-            )
+        new: num(fresh, column),
+        exit: num(exit, column),
+
+        renew: renewValues.every(value => value !== null)
+          ? renewValues.reduce((sum, value) => sum + value, 0)
           : null
       });
     }
@@ -282,7 +285,7 @@ export function parseKpi(book) {
     );
   }
 
-  return result.sort((a, b) =>
-    a.month.localeCompare(b.month)
+  return result.sort(
+    (a, b) => a.month.localeCompare(b.month)
   );
 }
