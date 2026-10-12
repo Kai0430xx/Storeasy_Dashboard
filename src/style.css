@@ -239,3 +239,89 @@ footer span{display:none}
 .preview-counts{gap:10px;font-size:11px;flex-wrap:wrap}
 .preview-counts b{font-size:17px;margin-left:5px}
 }
+/* 全站字體放大 */
+:root { font-size: 16px; }
+
+button, input, select, textarea,
+nav button {
+  font-size: 16px;
+}
+
+th {
+  font-size: 15px;
+  padding: 15px 20px;
+}
+
+td {
+  font-size: 16px;
+  padding: 18px 20px;
+}
+
+.badge, .table-sub, .text-button {
+  font-size: 14px;
+}
+
+.primary, .secondary,
+.filters select, .filters input {
+  font-size: 16px;
+}
+
+.page-title p, .panel-heading p,
+.hint, .soft-note,
+.modal p, .modal label,
+.import-card p, .import-card ul,
+.login-form label, .login-form > p,
+.login-switch {
+  font-size: 14px;
+}
+
+.panel-heading h2 { font-size: 20px; }
+h1 { font-size: 30px; }
+
+.stat-top { font-size: 16px; }
+.stat-card small { font-size: 14px; }
+.stat-card strong { font-size: 38px; }
+
+.section-label, .legend,
+.bar-column > span, .bar-column small,
+.comparisons div, .comparisons strong,
+.header-right, .breadcrumb {
+  font-size: 13px;
+}
+
+.flow-row > span, .activity-bottom,
+.activity-summary > div {
+  font-size: 16px;
+}
+
+.flow-row small, .activity-summary small,
+.activity-card p, .alert, .empty p,
+.preview-counts, .sidebar-foot strong {
+  font-size: 14px;
+}
+
+.sidebar-foot span, .nav-caption {
+  font-size: 12px;
+}
+
+.login-form .submit { font-size: 16px; }
+
+.modal input, .modal select, .modal textarea {
+  width: 100%;
+  min-width: 0;
+}
+
+.check-label input { width: 18px; }
+
+@media (max-width: 760px) {
+  h1 { font-size: 27px; }
+  .stat-card strong { font-size: 32px; }
+  .header-right, .breadcrumb { font-size: 12px; }
+
+  .toolbar select {
+    font-size: 14px;
+    max-width: 140px;
+  }
+
+  .filters input { width: 155px; }
+}
