@@ -1,4 +1,10 @@
 import {
+  pricingUpdate,
+  priceSnapshot,
+  frozenAmounts,
+} from "./pricing.js";
+
+import {
   initializeApp,
   deleteApp
 } from "firebase/app";
@@ -181,6 +187,10 @@ export async function execute(
 
       await runTransaction(db, async (transaction) => {
         const old = await transaction.get(ref);
+        existingMonths.set(
+          month.month,
+          old.data()
+        );
 
         if (old.data()?.importing) {
           throw new Error("據點正在匯入");
@@ -450,6 +460,7 @@ export async function execute(
           date,
           month: date.slice(0, 7),
           activities,
+          priceSnapshot: priceSnapshot(unit, date),
           previousEventDate:
             unit.lastEventDate || null,
           previousEventId:
@@ -720,6 +731,12 @@ export async function execute(
             unitDoc,
             {
               ...unit,
+              ...pricingUpdate(
+                unitSnapshot.data(),
+                unit,
+                taipeiDate(),
+                old.inventoryDate
+              ),
               ...(!unitSnapshot.exists()
                 ? {
                     status: "vacant",
@@ -794,6 +811,7 @@ export async function execute(
 
       const branchDoc = branch(data.branchId);
       const token = crypto.randomUUID();
+      let previousInventoryDate: string | null = null;
 
       await runTransaction(db, async (transaction) => {
         const snapshot =
@@ -803,6 +821,17 @@ export async function execute(
           throw new Error("據點不存在");
         }
 
+        previousInventoryDate =
+          snapshot.data().inventoryDate || null;
+
+        if (
+          previousInventoryDate &&
+          data.effectiveDate < previousInventoryDate
+        ) {
+          throw new Error(
+            "盤點日期不得早於上次盤點；舊月份請使用歷史 KPI 匯入"
+          );
+        }
         const lock = snapshot.data().importing;
 
         if (
@@ -835,9 +864,21 @@ export async function execute(
         )
       );
 
+      const previousUnits = new Map(
+        old.docs.map((item) => [
+          item.id,
+          item.data(),
+        ])
+      );
       const all: any[] = units.map(
         (unit) => ({
           ...unit,
+          ...pricingUpdate(
+            previousUnits.get(unit.code),
+            unit,
+            data.effectiveDate,
+            previousInventoryDate
+          ),
           status: vacant.has(unit.code)
             ? "vacant"
             : "rented",
@@ -1019,6 +1060,7 @@ export async function execute(
 
       const seen = new Set();
 
+      const existingMonths = new Map<string, any>();
       for (const month of months) {
         if (
           !/^\d{4}-(0[1-9]|1[0-2])$/.test(
@@ -1119,6 +1161,10 @@ export async function execute(
               new: month.new,
               renew: month.renew,
               exit: month.exit,
+              amounts: frozenAmounts(
+                existingMonths.get(month.month),
+                month.amounts
+              ),
               source: "import",
               updatedBy: me,
               updatedAt: time()
