@@ -1,3 +1,4 @@
+import { parseLease } from "./lease.js";
 import { kpiAmounts } from "./pricing.js";
 import ExcelJS from "exceljs";
 
@@ -69,6 +70,7 @@ export async function workbook(buffer) {
   return result;
 }
 
+/** @param {{requirePrice?: boolean, requireLease?: boolean}} [options] */
 export function parseUnits(
   book,
   sheetName = book.SheetNames[0],
@@ -120,6 +122,8 @@ export function parseUnits(
 
   if (!entries.length) return [];
 
+  const leaseIndex = column(["租期"]);
+  if (options.requireLease && leaseIndex < 0) throw new Error("缺少「租期」欄位；空倉請保留此欄並留空");
   const priceIndex = column([
     "月租",
     "月租金",
@@ -174,6 +178,10 @@ export function parseUnits(
 
     return {
       code,
+      ...(leaseIndex < 0 ? {} : (() => {
+        try { return parseLease(row[leaseIndex]); }
+        catch (error) { throw new Error(`倉位 ${code}：${error.message}`); }
+      })()),
       dimensions:
         dimensionsIndex < 0
           ? ""

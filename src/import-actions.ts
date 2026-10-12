@@ -28,7 +28,6 @@ export function sourceFiles(data: any, kind: string) {
   return kind === "inventory"
     ? {
         total: filename(data.totalFile),
-        vacant: filename(data.vacantFile),
       }
     : { kpi: filename(data.kpiFile) };
 }

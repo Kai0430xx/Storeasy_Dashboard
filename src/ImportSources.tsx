@@ -48,9 +48,9 @@ export default function ImportSources({
         branchName: branch.name,
         kind: "inventory",
         sourceId: branch.inventorySource?.id || "legacy",
-        name:
-          `總倉：${branch.inventorySource?.total || "舊資料未記錄檔名"}` +
-          `／空倉：${branch.inventorySource?.vacant || "舊資料未記錄檔名"}`,
+        name: branch.inventorySource?.vacant
+        ? `總倉：${branch.inventorySource.total}／空倉：${branch.inventorySource.vacant}`
+        : `倉位：${branch.inventorySource?.total || "舊資料未記錄檔名"}`,
         detail: `現況盤點日期：${branch.inventoryDate || "—"}`,
       });
     }
@@ -121,7 +121,7 @@ export default function ImportSources({
                 <td>
                   {row.branchName}
                   <small className="table-sub">
-                    {row.kind === "inventory" ? "總倉＋空倉" : "KPI"}
+                    {row.kind === "inventory" ? "倉位表" : "KPI"}
                   </small>
                 </td>
                 <td>{row.name}</td>
@@ -164,7 +164,7 @@ export default function ImportSources({
 
             <p>
               {pending.kind === "inventory"
-                ? "將清空此據點目前的倉位現況（含後續手動修改），總倉與空倉資料一起移除，不會自動切回上一份檔案。歷史 KPI、承租異動與價格紀錄保留，可重新匯入建立現況。"
+                ? "將清空此據點目前的倉位現況（含後續手動修改），倉位表資料移除，不會自動切回上一份檔案。歷史 KPI、承租異動與價格紀錄保留，可重新匯入建立現況。"
                 : "將刪除採用此檔案的整月份 KPI 統計，包含該月份金額及數量，歷史比較將顯示無資料。即時承租異動不會刪除，可重新匯入。"}
             </p>
 

@@ -1,3 +1,6 @@
+import { leaseStatus } from "./lease.js";
+import { compareUnits } from "./unit-view.js";
+import ActivityUsage from "./ActivityUsage";
 import ImportSources from "./ImportSources";
 import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
@@ -88,6 +91,12 @@ const friendly = (error: any) => {
 };
 
 function App() {
+  const [unitSort, setUnitSort] = useState("code");
+  const [currentDate, setCurrentDate] = useState(today());
+  useEffect(() => {
+    const timer = window.setInterval(() => setCurrentDate(today()), 60000);
+    return () => window.clearInterval(timer);
+  }, []);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Row | null>(null);
   const [loading, setLoading] = useState(true);
@@ -221,7 +230,7 @@ function App() {
         ["months", collection(db, "branches", branch.id, "months")],
       ];
 
-      if (page === "units" || page === "imports") {
+      if (page === "units" || page === "imports" || page === "activities") {
         sources.push([
           "units",
           collection(db, "branches", branch.id, "units"),
@@ -990,7 +999,12 @@ function App() {
                       }
                     >
                       <option value="all">全部狀態</option>
-                      <option value="rented">已出租</option>
+                      <option value="rented">全部已出租</option>
+                      <option value="active">租期內</option>
+                      <option value="expiring">即將到期</option>
+                      <option value="overdue">已逾期</option>
+                      <option value="upcoming">尚未起租</option>
+                      <option value="unknown">租期未提供</option>
                       <option value="vacant">空倉</option>
                       <option value="missing">清單中消失</option>
                     </select>
@@ -1016,11 +1030,11 @@ function App() {
                       <table>
                         <thead>
                           <tr>
-                            <th>倉位／據點</th>
+                            <th aria-sort={unitSort === "code" ? "ascending" : "none"}><button className="text-button" aria-label="倉位／據點" onClick={() => setUnitSort("code")}>倉位／據點{unitSort === "code" ? " ↑" : ""}</button></th>
                             <th>尺寸</th>
-                            <th>材積</th>
+                            <th aria-sort={unitSort === "volume" ? "ascending" : "none"}><button className="text-button" aria-label="材積" onClick={() => setUnitSort("volume")}>材積{unitSort === "volume" ? " ↑" : ""}</button></th>
                             <th>月租</th>
-                            <th>狀態</th>
+                            <th>狀態</th><th>租期</th>
                             <th>備註</th>
                             {canWrite && <th>操作</th>}
                           </tr>
@@ -1031,14 +1045,14 @@ function App() {
                               (
                                 status === "all" ||
                                 (status === "missing" && unit.missing) ||
-                                (status === unit.status && !unit.missing)
+                                (status === unit.status && !unit.missing) || status === leaseStatus(unit, currentDate).key
                               ) &&
                               `${unit.code}${unit.branchName}`
                                 .toLowerCase()
                                 .includes(search.toLowerCase()),
                             )
                             .sort((a, b) =>
-                              a.code.localeCompare(b.code),
+                              compareUnits(a, b, unitSort),
                             )
                             .map((unit) => (
                               <tr
@@ -1056,20 +1070,9 @@ function App() {
                                   NT$ {Number(unit.price).toLocaleString()}
                                 </td>
                                 <td>
-                                  <span className={`badge ${
-                                    unit.missing
-                                      ? "warning"
-                                      : unit.status === "rented"
-                                        ? "blue"
-                                        : "green"
-                                  }`}>
-                                    {unit.missing
-                                      ? "清單中消失"
-                                      : unit.status === "rented"
-                                        ? "已出租"
-                                        : "空倉"}
-                                  </span>
+                                  <span className={`badge ${leaseStatus(unit, currentDate).color}`}>{leaseStatus(unit, currentDate).label}</span>
                                 </td>
+                                <td>{unit.leasePeriod || "—"}</td>
                                 <td>{unit.note || "—"}</td>
 
                                 {canWrite && (
@@ -1133,7 +1136,7 @@ function App() {
                         </tbody>
                       </table>
                       {!units.length && (
-                        <Empty text="尚無倉位資料，請先匯入總倉與空倉清單。" />
+                        <Empty text="尚無倉位資料，請先匯入含租期欄位的倉位表。" />
                       )}
                     </div>
                   </section>
@@ -1261,7 +1264,7 @@ function App() {
                             {activity.description || "未填寫活動說明"}
                           </p>
                           <div className="activity-bottom">
-                            <span>
+                            <button className="text-button" onClick={() => setModal({ kind: "activityUsage", activity, month })}>
                               {events.filter((event) =>
                                 event.month === month &&
                                 event.branchId === activity.branchId &&
@@ -1270,7 +1273,7 @@ function App() {
                                     item.id === activity.id,
                                 ),
                               ).length} 次使用
-                            </span>
+                            </button>
                             {canWrite && (
                               <button
                                 className="text-button"
@@ -1309,14 +1312,12 @@ function App() {
                       </div>
                       <h2>倉位現況匯入</h2>
                       <p>
-                        同時選擇總倉與空倉 Excel。
-                        總倉扣除空倉即為已出租，
-                        匯入前先預覽比對結果。
+                        只需上傳一份倉位 Excel。有租期代表已出租，租期空白代表空倉。到期前 14 天標示即將到期，逾期仍計入已出租，直到登記退租。
                       </p>
                       <ul>
                         <li>
                           欄位：倉位、尺寸 W*L*H、材積、
-                          單價、月租、備註
+                          單價、月租、備註、租期
                         </li>
                         <li>
                           消失的倉位會標示保留，不直接刪除
@@ -1577,8 +1578,7 @@ function App() {
             role="dialog"
             aria-modal="true"
             className={`modal ${
-              ["inventory", "kpi"].includes(modal.kind)
-                ? "wide"
+              ["inventory", "kpi", "activityUsage"].includes(modal.kind) ? "wide"
                 : ""
             }`}
           >
@@ -1589,6 +1589,7 @@ function App() {
                   branch: "據點資料",
                   event: `登記${types[modal.type]}`,
                   activity: "活動設定",
+                      activityUsage: "活動使用明細",
                   inventory: "匯入倉位現況",
                   kpi: "匯入歷史 KPI",
                   assign: "指派角色與據點",
@@ -1689,6 +1690,9 @@ function App() {
               </form>
             )}
 
+            {modal.kind === "activityUsage" && (
+              <ActivityUsage activity={modal.activity} month={modal.month} events={events} units={units} />
+            )}
             {modal.kind === "event" && (
               <form
                 onSubmit={(event) => {
@@ -1701,6 +1705,7 @@ function App() {
                       type: modal.type,
                       date: form.get("date"),
                       activityIds: form.getAll("activity"),
+                      leasePeriod: form.get("leasePeriod"),
                     }),
                     "倉位狀態與異動已更新",
                   );
@@ -1732,6 +1737,13 @@ function App() {
                   />
                 </label>
 
+                {modal.type !== "exit" && (
+                  <label>
+                    {modal.type === "renew" ? "新的租期" : "租期"}
+                    <input aria-label={modal.type === "renew" ? "新的租期" : "租期"} name="leasePeriod" required placeholder="2026/10/08－2027/04/07" autoComplete="off" />
+                    <small className="hint">請貼上完整起訖日期，例如 2026/10/08－2027/04/07。</small>
+                  </label>
+                )}
                 {modal.type !== "exit" && (
                   <fieldset>
                     <legend>使用活動（可複選）</legend>
@@ -2017,6 +2029,9 @@ function App() {
                     defaultValue={modal.unitPrice || 0}
                   />
                 </label>
+                {modal.status === "rented" && (
+                  <label>租期<input name="leasePeriod" required defaultValue={modal.leasePeriod || ""} placeholder="2026/10/08－2027/04/07" /></label>
+                )}
                 <label>
                   備註
                   <textarea
@@ -2371,40 +2386,18 @@ function ImportForm({
 
             if (kind === "inventory") {
               const all = parseUnits(
-                await workbook(
-                  await (form.get("all") as File).arrayBuffer(),
-                ),
-              );
-              const vacant = parseUnits(
-                await workbook(
-                  await (form.get("vacant") as File).arrayBuffer(),
-                ),
+                await workbook(await (form.get("all") as File).arrayBuffer()),
                 undefined,
-                { requirePrice: false },
-              ).map((unit: Row) => unit.code);
-              const codes = new Set(
-                all.map((unit: Row) => unit.code),
+                { requirePrice: true, requireLease: true },
               );
-
-              if (
-                vacant.some(
-                  (code: string) => !codes.has(code),
-                )
-              ) {
-                throw new Error(
-                  "空倉表含總倉清單不存在的倉位",
-                );
-              }
-
+              const vacant = all.filter((unit: Row) => !unit.leasePeriod).map((unit: Row) => unit.code);
+              const codes = new Set(all.map((unit: Row) => unit.code));
               setPreview({
                 units: all,
                 totalFile: (form.get("all") as File).name,
-                vacantFile: (form.get("vacant") as File).name,
                 vacantCodes: vacant,
                 effectiveDate: form.get("date"),
-                missing: units
-                  .filter((unit) => !codes.has(unit.code))
-                  .map((unit) => unit.code),
+                missing: units.filter(unit => !unit.archived && !codes.has(unit.code)).map(unit => unit.code),
               });
             } else {
               const months = parseKpi(
@@ -2435,7 +2428,7 @@ function ImportForm({
         {kind === "inventory" ? (
           <>
             <label>
-              總倉 Excel
+              倉位 Excel
               <input
                 name="all"
                 type="file"
@@ -2444,16 +2437,7 @@ function ImportForm({
                 onChange={() => setPreview(null)}
               />
             </label>
-            <label>
-              空倉 Excel
-              <input
-                name="vacant"
-                type="file"
-                accept=".xlsx"
-                required
-                onChange={() => setPreview(null)}
-              />
-            </label>
+            
             <label>
               盤點生效日期
               <input

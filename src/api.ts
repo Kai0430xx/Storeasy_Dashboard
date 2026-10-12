@@ -1,3 +1,4 @@
+import { parseLease } from "./lease.js";
 import { removeImport, sourceFiles } from "./import-actions";
 
 import {
@@ -422,6 +423,13 @@ export async function execute(
           throw new Error("退租不能使用優惠");
         }
 
+        const lease = parseLease(type === "exit" ? "" : data.leasePeriod);
+        if (type !== "exit" && !lease.leasePeriod) throw new Error("承租與續約必須填寫租期");
+        const previousLease = {
+          leasePeriod: unit.leasePeriod || "",
+          leaseStart: unit.leaseStart || null,
+          leaseEnd: unit.leaseEnd || null,
+        };
         const delta =
           type === "new"
             ? 1
@@ -436,6 +444,7 @@ export async function execute(
           branchData.vacant - delta;
 
         transaction.update(unitDoc, {
+          ...lease,
           status:
             type === "exit"
               ? "vacant"
@@ -459,6 +468,14 @@ export async function execute(
           month: date.slice(0, 7),
           activities,
           priceSnapshot: priceSnapshot(unit, date),
+          unitSnapshot: {
+            dimensions: unit.dimensions,
+            volume: unit.volume,
+            price: priceSnapshot(unit, date).price,
+            note: unit.note,
+            ...lease,
+          },
+          previousLease,
           previousEventDate:
             unit.lastEventDate || null,
           previousEventId:
@@ -598,6 +615,7 @@ export async function execute(
         const old = branchSnapshot.data()!;
 
         transaction.update(unitDoc, {
+          ...(event.previousLease || { leasePeriod: "", leaseStart: null, leaseEnd: null }),
           status:
             event.type === "new"
               ? "vacant"
@@ -725,6 +743,10 @@ export async function execute(
             ? 0
             : 1;
 
+          if (unitSnapshot.data()?.status === "rented" && "leasePeriod" in data && !unit.leasePeriod)
+            throw new Error("已出租倉位必須填寫租期；若已退租請使用退租操作");
+          if ((!unitSnapshot.exists() || unitSnapshot.data()?.status === "vacant") && unit.leasePeriod)
+            throw new Error("空倉請先登記承租，再填寫租期");
           transaction.set(
             unitDoc,
             {
@@ -789,9 +811,11 @@ export async function execute(
         units.map((unit) => unit.code)
       );
 
-      const vacant = new Set<string>(
-        data.vacantCodes
-      );
+      const vacant = new Set<string>(units.filter(unit => !unit.leasePeriod).map(unit => unit.code));
+      if (data.units.some((unit: any) => typeof unit.leasePeriod !== "string"))
+        throw new Error("請使用含「租期」欄的單一倉位表重新匯入");
+      if (data.vacantCodes.some((code: string) => !vacant.has(code)))
+        throw new Error("租期與空倉判定不一致");
 
       if (
         vacant.size !==

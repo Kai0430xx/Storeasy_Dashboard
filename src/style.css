@@ -325,3 +325,5 @@ h1 { font-size: 30px; }
 
   .filters input { width: 155px; }
 }
+
+.badge.red { background: #fff0ec; color: #b42318; }

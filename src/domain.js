@@ -1,3 +1,4 @@
+import { parseLease } from "./lease.js";
 export const roles = [
   "admin",
   "supervisor",
@@ -58,6 +59,7 @@ export function inventoryStats(units) {
   };
 }
 
+/** @returns {Array<{code:string,dimensions:string,volume:number,price:number,unitPrice:number,note:string,leasePeriod?:string,leaseStart?:string|null,leaseEnd?:string|null}>} */
 export function normalizeUnits(rows) {
   if (
     !Array.isArray(rows) ||
@@ -87,6 +89,7 @@ export function normalizeUnits(rows) {
 
     const result = {
       code,
+      ...("leasePeriod" in row ? parseLease(row.leasePeriod) : {}),
       dimensions: String(
         row.dimensions || ""
       ).slice(0, 100),
