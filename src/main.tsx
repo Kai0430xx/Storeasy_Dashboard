@@ -90,7 +90,7 @@ function App() {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Row | null>(null);
   const [loading, setLoading] = useState(true);
-  const [branches, setBranches] = useState<Row[]>([]);
+  const [branchRows, setBranches] = useState<Row[]>([]);
   const [branchId, setBranchId] = useState("all");
   const [page, setPage] = useState("dashboard");
   const [month, setMonth] = useState(today().slice(0, 7));
@@ -111,6 +111,13 @@ function App() {
   const [status, setStatus] = useState("all");
   const [mobile, setMobile] = useState(false);
 
+  const branches = [...branchRows].sort((a, b) =>
+  String(a.name || "").localeCompare(
+    String(b.name || ""),
+    "zh-Hant-u-co-stroke",
+    { numeric: true }
+  )
+);
   const global =
     profile && ["admin", "supervisor"].includes(profile.role);
   const canWrite =
