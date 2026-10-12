@@ -186,11 +186,7 @@ export async function execute(
       }
 
       await runTransaction(db, async (transaction) => {
-        const old = await transaction.get(ref);
-        existingMonths.set(
-          month.month,
-          old.data()
-        );
+        conconst old = await transaction.get(ref);
 
         if (old.data()?.importing) {
           throw new Error("據點正在匯入");
@@ -1134,6 +1130,11 @@ export async function execute(
                 month.month
               )
             );
+
+          existingMonths.set(
+            month.month,
+            old.data()
+          );
 
           if (
             old.exists() &&
