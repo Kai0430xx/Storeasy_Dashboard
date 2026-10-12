@@ -1150,7 +1150,7 @@ function App() {
                             <th>倉位／據點</th>
                             <th>類型</th>
                             <th>異動當時牌價</th>
-                            <th>使用活動</th>
+                            <th>使用活動</th><th>退租原因</th>
                             {canWrite && <th>更正</th>}
                           </tr>
                         </thead>
@@ -1182,6 +1182,7 @@ function App() {
                                     ?.map((activity: Row) => activity.name)
                                     .join("、") || "—"}
                                 </td>
+                                <td className="exit-reason">{event.type === "exit" ? event.exitReason || "未記錄" : "—"}</td>
                                 {canWrite && (
                                   <td>
                                     <button
@@ -1718,6 +1719,7 @@ function App() {
                       type: modal.type,
                       date: form.get("date"),
                       activityIds: form.getAll("activity"),
+                      exitReason: form.get("exitReason"),
                       leasePeriod: form.get("leasePeriod"),
                     }),
                     "倉位狀態與異動已更新",
@@ -1750,6 +1752,18 @@ function App() {
                   />
                 </label>
 
+                {modal.type === "exit" && (
+                  <label>
+                    退租原因
+                    <textarea
+                      name="exitReason"
+                      required
+                      maxLength={500}
+                      rows={3}
+                      placeholder="請填寫退租原因，最多 500 字"
+                    />
+                  </label>
+                )}
                 {modal.type !== "exit" && (
                   <label>
                     {modal.type === "renew" ? "新的租期" : "租期"}

@@ -424,6 +424,10 @@ export async function execute(
           throw new Error("退租不能使用優惠");
         }
 
+        const exitReason = type === "exit" && typeof data.exitReason === "string"
+          ? data.exitReason.trim() : "";
+        if (type === "exit" && (!exitReason || exitReason.length > 500))
+          throw new Error("退租原因請填寫 1～500 字，不能只有空白");
         const lease = parseLease(type === "exit" ? "" : data.leasePeriod);
         if (type !== "exit" && !lease.leasePeriod) throw new Error("承租與續約必須填寫租期");
         const previousLease = {
@@ -468,6 +472,7 @@ export async function execute(
           date,
           month: date.slice(0, 7),
           activities,
+          exitReason,
           priceSnapshot: priceSnapshot(unit, date),
           unitSnapshot: {
             dimensions: unit.dimensions,
