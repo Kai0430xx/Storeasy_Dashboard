@@ -1146,6 +1146,7 @@ function App() {
                             <th>日期</th>
                             <th>倉位／據點</th>
                             <th>類型</th>
+                            <th>異動當時牌價</th>
                             <th>使用活動</th>
                             {canWrite && <th>更正</th>}
                           </tr>
@@ -1166,6 +1167,13 @@ function App() {
                                   </small>
                                 </td>
                                 <td>{types[event.type]}</td>
+                                <td>
+                                  {event.priceSnapshot?.price === undefined
+                                    ? "尚未記錄"
+                                    : `NT$ ${Number(
+                                        event.priceSnapshot.price
+                                      ).toLocaleString()}`}
+                                </td>
                                 <td>
                                   {event.activities
                                     ?.map((activity: Row) => activity.name)
