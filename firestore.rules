@@ -6,6 +6,13 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function activeUser() {
+      return signedIn()
+        && exists(
+          /databases/$(database)/documents/users/$(request.auth.uid)
+        );
+    }
+
     function profile() {
       return get(
         /databases/$(database)/documents/users/$(request.auth.uid)
@@ -13,14 +20,14 @@ service cloud.firestore {
     }
 
     function globalAccess() {
-      return signedIn()
+      return activeUser()
         && profile().role in ['admin', 'supervisor'];
     }
 
     function branchAccess(id) {
       return globalAccess()
         || (
-          signedIn()
+          activeUser()
           && profile().role in ['manager', 'employee']
           && id in profile().branchIds
         );
@@ -29,7 +36,7 @@ service cloud.firestore {
     function branchEdit(id) {
       return globalAccess()
         || (
-          signedIn()
+          activeUser()
           && profile().role == 'manager'
           && id in profile().branchIds
         );
@@ -69,7 +76,7 @@ service cloud.firestore {
           || globalAccess()
         );
 
-      allow create: if signedIn()
+      allow create: if signedIn() && !exists(/databases/$(database)/documents/deletedUsers/$(uid))
         && uid == request.auth.uid
         && request.resource.data.keys().hasOnly([
           'username',
@@ -137,7 +144,41 @@ service cloud.firestore {
           )
         );
 
-      allow delete: if false;
+      allow delete: if activeUser()
+      && profile().role == 'admin'
+      && uid != request.auth.uid
+      && existsAfter(
+        /databases/$(database)/documents/deletedUsers/$(uid)
+      )
+      && getAfter(
+        /databases/$(database)/documents/deletedUsers/$(uid)
+      ).data.deletedBy == request.auth.uid
+      && getAfter(
+        /databases/$(database)/documents/deletedUsers/$(uid)
+      ).data.deletedAt == request.time;
+    }
+
+
+    match /deletedUsers/{uid} {
+      allow read: if signedIn()
+        && (uid == request.auth.uid || globalAccess());
+
+      allow create: if activeUser()
+        && profile().role == 'admin'
+        && uid != request.auth.uid
+        && request.resource.data.keys().hasOnly([
+          'username', 'deletedBy', 'deletedAt'
+        ])
+        && request.resource.data.username == get(
+          /databases/$(database)/documents/users/$(uid)
+        ).data.username
+        && request.resource.data.deletedBy == request.auth.uid
+        && request.resource.data.deletedAt == request.time
+        && !existsAfter(
+          /databases/$(database)/documents/users/$(uid)
+        );
+
+      allow update, delete: if false;
     }
 
     match /branches/{id} {

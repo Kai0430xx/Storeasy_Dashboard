@@ -1,3 +1,4 @@
+import { getDoc } from "firebase/firestore";
 import RentalDetails from "./RentalDetails";
 import { leaseStatus } from "./lease.js";
 import { compareUnits } from "./unit-view.js";
@@ -150,14 +151,39 @@ function App() {
 
   useEffect(() => {
     if (!user) return;
-    return onSnapshot(
+    let stopped = false;
+    const stop = onSnapshot(
       doc(db, "users", user.uid),
-      (snapshot) =>
-        setProfile(snapshot.exists() ? snapshot.data() : null),
-      (error) => setError(friendly(error)),
+      async snapshot => {
+        if (stopped) return;
+        setProfile(snapshot.exists() ? snapshot.data() : null);
+        if (!snapshot.exists()) {
+          setBranches([]);
+          setData({});
+          try {
+            const removed = await getDoc(
+              doc(db, "deletedUsers", user.uid)
+            );
+            if (
+              !stopped &&
+              auth.currentUser?.uid === user.uid &&
+              removed.exists()
+            ) {
+              await signOut(auth);
+              setError("此帳號已被管理員刪除，請聯絡管理員");
+            }
+          } catch (error) {
+            if (!stopped) setError(friendly(error));
+          }
+        }
+      },
+      error => setError(friendly(error)),
     );
+    return () => {
+      stopped = true;
+      stop();
+    };
   }, [user]);
-
   useEffect(() => {
     if (!profile) return;
     const stops: (() => void)[] = [];
@@ -1551,6 +1577,17 @@ function App() {
                                   >
                                     指派權限
                                   </button>
+{profile.role === "admin" && (
+  <button
+    className="text-button danger"
+    disabled={busy || item.id === user.uid}
+    title={item.id === user.uid ? "不能刪除自己" : "刪除系統帳號"}
+    onClick={() => setModal({kind: "deleteUser", target: item})}
+  >
+    刪除帳號
+  </button>
+)}
+
                                 </td>
                               </tr>
                             ))}
@@ -1594,7 +1631,7 @@ function App() {
                   inventory: "匯入倉位現況",
                   kpi: "匯入歷史 KPI",
                   assign: "指派角色與據點",
-                  createUser: "建立帳號",
+                  createUser: "建立帳號", deleteUser: "刪除帳號",
                   unitEdit: "倉位資料",
                   void: "撤銷異動",
                   removeKpi: "移除歷史統計",
@@ -1889,6 +1926,27 @@ function App() {
               />
             )}
 
+            {modal.kind === "deleteUser" && <>
+              <p>確定刪除帳號「{modal.target.username}」？</p>
+              <p>
+                刪除後會立即移除系統帳號及據點權限，該帳號不能使用網站。
+                既有營運紀錄保留。
+              </p>
+              <p className="hint">
+                Firebase Authentication 的登入資料須由管理員到
+                Firebase 控制台另行刪除。
+              </p>
+              <button
+                className="primary danger"
+                disabled={busy}
+                onClick={() => run(
+                  () => call("deleteUser", {uid: modal.target.id}),
+                  "系統帳號及權限已刪除"
+                )}
+              >
+                確認刪除帳號
+              </button>
+            </>}
             {modal.kind === "assign" && (
               <form
                 onSubmit={(event) => {

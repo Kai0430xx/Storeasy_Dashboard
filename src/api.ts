@@ -1,3 +1,4 @@
+import { deleteUserAccount } from "./delete-user";
 import { removeActivity } from "./remove-activity";
 import { parseLease } from "./lease.js";
 import { removeImport, sourceFiles } from "./import-actions";
@@ -110,6 +111,7 @@ export async function execute(
       return {};
     }
 
+    case "deleteUser": { return deleteUserAccount(data); }
     case "manageUser": {
       if (data.action === "create") {
         const app = initializeApp(
