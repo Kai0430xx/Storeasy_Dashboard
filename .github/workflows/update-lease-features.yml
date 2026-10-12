@@ -27,7 +27,7 @@ jobs:
           node-version: '22'
 
       - name: Apply dashboard features
-        run: python3 scripts/update-admin-void.py
+        run: python3 scripts/update-exit-reason.py
 
       - name: Install dependencies
         run: |
