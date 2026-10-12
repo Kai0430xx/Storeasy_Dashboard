@@ -524,162 +524,156 @@ export async function execute(
     case "removeActivity": {
       return removeActivity(data);
     }
+
     case "voidEvent": {
-      const branchDoc = branch(data.branchId);
+      const b = branch(data.branchId),
+        e = doc(db, "branches", data.branchId, "events", data.eventId);
 
-      const eventDoc = doc(
-        db,
-        "branches",
-        data.branchId,
-        "events",
-        data.eventId
-      );
-
-      await runTransaction(db, async (transaction) => {
-        const [
-          branchSnapshot,
-          eventSnapshot
-        ] = await Promise.all([
-          transaction.get(branchDoc),
-          transaction.get(eventDoc)
+      await runTransaction(db, async (t) => {
+        const [bs, es, actor] = await Promise.all([
+          t.get(b),
+          t.get(e),
+          t.get(doc(db, "users", me)),
         ]);
 
-        if (
-          !eventSnapshot.exists() ||
-          eventSnapshot.data().voided ||
-          branchSnapshot.data()?.importing
-        ) {
-          throw new Error(
-            "異動不存在、已撤銷或據點正在匯入"
+        if (!es.exists() || es.data().voided || bs.data()?.importing)
+          throw new Error("異動不存在、已撤銷或據點正在匯入");
+
+        const event = es.data(),
+          u = doc(db, "branches", data.branchId, "units", event.code),
+          m = doc(db, "branches", data.branchId, "months", event.month),
+          n = doc(
+            db,
+            "branches",
+            data.branchId,
+            "months",
+            taipeiDate().slice(0, 7),
           );
-        }
 
-        const event = eventSnapshot.data();
-
-        const unitDoc = doc(
-          db,
-          "branches",
-          data.branchId,
-          "units",
-          event.code
-        );
-
-        const eventMonthDoc = doc(
-          db,
-          "branches",
-          data.branchId,
-          "months",
-          event.month
-        );
-
-        const currentMonthDoc = doc(
-          db,
-          "branches",
-          data.branchId,
-          "months",
-          taipeiDate().slice(0, 7)
-        );
-
-        const [
-          unitSnapshot,
-          monthSnapshot,
-          currentMonthSnapshot
-        ] = await Promise.all([
-          transaction.get(unitDoc),
-          transaction.get(eventMonthDoc),
-          transaction.get(currentMonthDoc)
+        const [us, ms, ns] = await Promise.all([
+          t.get(u), t.get(m), t.get(n),
         ]);
 
-        if (
-          !unitSnapshot.exists() ||
-          unitSnapshot.data().lastEventId !==
-            data.eventId
-        ) {
-          throw new Error(
-            "只能撤銷該倉位最後一筆異動"
-          );
-        }
+        const isAdmin = actor.data()?.role === "admin";
 
-        if (
-          monthSnapshot.data()?.source ===
-          "import"
-        ) {
-          throw new Error(
-            "該月已匯入歷史 KPI"
-          );
-        }
+        const last =
+          us.exists() &&
+          us.data().lastEventId === data.eventId &&
+          !us.data().missing &&
+          !us.data().archived;
 
-        if (!Number.isInteger(monthSnapshot.data()?.[event.type]) || monthSnapshot.data()![event.type] < 1)
-          throw new Error("該月份異動數量與紀錄不一致，無法撤銷；請核對是否曾修改統計資料");
-        if ((event.type === "new" && branchSnapshot.data()!.rented < 1) || (event.type === "exit" && branchSnapshot.data()!.vacant < 1))
-          throw new Error("倉位現況與異動紀錄不一致，無法撤銷");
-        const delta =
+        const count = ms.data()?.[event.type];
+
+        const counted =
+          ms.data()?.source === "live" &&
+          Number.isInteger(count) &&
+          count > 0;
+
+        const safeState =
           event.type === "new"
-            ? -1
+            ? bs.data()!.rented > 0
             : event.type === "exit"
-              ? 1
-              : 0;
+              ? bs.data()!.vacant > 0
+              : true;
 
-        const old = branchSnapshot.data()!;
+        if (isAdmin && (!last || !counted || !safeState)) {
+          t.update(e, {
+            voided: true,
+            voidedBy: me,
+            voidedAt: time(),
+            voidMode: "history",
+          });
 
-        transaction.update(unitDoc, {
-          ...(event.previousLease || { leasePeriod: "", leaseStart: null, leaseEnd: null }),
-          status:
-            event.type === "new"
-              ? "vacant"
-              : "rented",
+          if (counted) {
+            t.set(
+              m,
+              { [event.type]: count - 1 },
+              { merge: true },
+            );
+          }
+
+          t.update(b, {
+            revision: bs.data()!.revision + 1,
+            updatedAt: time(),
+          });
+
+          return;
+        }
+
+        if (!last)
+          throw new Error("只能撤銷該倉位最後一筆異動");
+
+        if (ms.data()?.source === "import")
+          throw new Error("該月已匯入歷史 KPI");
+
+        if (
+          !Number.isInteger(ms.data()?.[event.type]) ||
+          ms.data()![event.type] < 1
+        )
+          throw new Error(
+            "該月份異動數量與紀錄不一致，無法撤銷；請核對是否曾修改統計資料"
+          );
+
+        if (
+          (event.type === "new" && bs.data()!.rented < 1) ||
+          (event.type === "exit" && bs.data()!.vacant < 1)
+        )
+          throw new Error("倉位現況與異動紀錄不一致，無法撤銷");
+
+        const delta =
+          event.type === "new" ? -1 :
+          event.type === "exit" ? 1 : 0;
+
+        const old = bs.data()!;
+
+        t.update(u, {
+          ...(event.previousLease || {
+            leasePeriod: "",
+            leaseStart: null,
+            leaseEnd: null,
+          }),
+          status: event.type === "new" ? "vacant" : "rented",
           lastEventId: event.previousEventId,
-          lastEventDate:
-            event.previousEventDate,
-          updatedAt: time()
+          lastEventDate: event.previousEventDate,
+          updatedAt: time(),
         });
 
-        transaction.update(eventDoc, {
+        t.update(e, {
           voided: true,
           voidedBy: me,
-          voidedAt: time()
+          voidedAt: time(),
+          voidMode: "rollback",
         });
 
-        transaction.update(branchDoc, {
+        t.update(b, {
           rented: old.rented + delta,
           vacant: old.vacant - delta,
           revision: old.revision + 1,
-          updatedAt: time()
+          updatedAt: time(),
         });
 
-        transaction.set(
-          eventMonthDoc,
-          {
-            [event.type]:
-              (
-                monthSnapshot.data()?.[
-                  event.type
-                ] || 0
-              ) - 1
-          },
-          { merge: true }
+        t.set(
+          m,
+          { [event.type]: (ms.data()?.[event.type] || 0) - 1 },
+          { merge: true },
         );
 
-        if (
-          currentMonthSnapshot.data()?.source !==
-          "import"
-        ) {
-          transaction.set(
-            currentMonthDoc,
+        if (ns.data()?.source !== "import") {
+          t.set(
+            n,
             {
               source: "live",
               total: old.total,
               rented: old.rented + delta,
-              snapshotDate: taipeiDate()
+              snapshotDate: taipeiDate(),
             },
-            { merge: true }
+            { merge: true },
           );
         }
       });
 
       return {};
     }
-
     case "saveUnit": {
       const unit = normalizeUnits([
         {

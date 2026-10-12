@@ -307,17 +307,13 @@ service cloud.firestore {
             /databases/$(database)/documents/branches/$(id)/units/$(request.resource.data.code)
           ).data.lastEventId == eventId;
 
-        allow update: if (branchEdit(id)
+        allow update: if ((branchEdit(id)
           && unlocked(id)
           && !resource.data.voided
           && request.resource.data.voided
           && request.resource.data.diff(
             resource.data
-          ).affectedKeys().hasOnly([
-            'voided',
-            'voidedBy',
-            'voidedAt'
-          ])
+          ).affectedKeys().hasOnly(['voided','voidedBy','voidedAt','voidMode']) && (!('voidMode' in request.resource.data) || request.resource.data.voidMode == 'rollback')
           && request.resource.data.voidedBy == request.auth.uid
           && request.resource.data.voidedAt == request.time
           && get(
@@ -325,7 +321,13 @@ service cloud.firestore {
           ).data.lastEventId == eventId
           && getAfter(
             /databases/$(database)/documents/branches/$(id)/units/$(resource.data.code)
-          ).data.lastEventId == resource.data.previousEventId) || (branchEdit(id) && ownImport(id) && ('activityRemoval' in request.resource.data) && removesActivity());
+          ).data.lastEventId == resource.data.previousEventId) || (branchEdit(id) && ownImport(id) && ('activityRemoval' in request.resource.data) && removesActivity())) || (signedIn() && profile().role == 'admin' && unlocked(id)
+          && !resource.data.voided && request.resource.data.voided == true
+          && ('voidMode' in request.resource.data)
+          && request.resource.data.voidMode == 'history'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['voided','voidedBy','voidedAt','voidMode'])
+          && request.resource.data.voidedBy == request.auth.uid
+          && request.resource.data.voidedAt == request.time);
 
         allow delete: if false;
       }

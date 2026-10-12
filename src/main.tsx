@@ -2078,11 +2078,10 @@ function App() {
             {modal.kind === "void" && (
               <>
                 <p>
-                  撤銷 {modal.event.code} 在
-                  {" "}{modal.event.date} 的
-                  {types[modal.event.type]}？
-                  僅能撤銷該倉位最後一筆異動，
-                  恢復先前狀態。
+                  撤銷 {modal.event.code} 在 {modal.event.date} 的{types[modal.event.type]}？
+                  {profile?.role === "admin"
+                    ? "管理員可以撤銷任一筆紀錄。較早紀錄只作廢並扣除可對應的即時異動筆數，保留目前倉位現況及後續租期；最後一筆在資料可安全回復時會回復前一狀態。匯入 KPI 彙總不會自動修改。"
+                    : "只能撤銷該倉位最後一筆異動，並回復前一狀態。"}
                 </p>
                 <button
                   className="primary"
