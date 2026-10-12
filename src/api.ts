@@ -1,3 +1,5 @@
+import { removeImport, sourceFiles } from "./import-actions";
+
 import {
   pricingUpdate,
   priceSnapshot,
@@ -775,7 +777,12 @@ export async function execute(
       return {};
     }
 
+    case "removeImport": {
+      return removeImport(data);
+    }
+
     case "importInventory": {
+      const files = sourceFiles(data, "inventory");
       const units = normalizeUnits(data.units);
 
       const codes = new Set(
@@ -879,6 +886,7 @@ export async function execute(
             ? "vacant"
             : "rented",
           missing: false,
+          archived: false,
           lastEventDate:
             data.effectiveDate,
           lastEventId: null
@@ -957,6 +965,7 @@ export async function execute(
           importing: deleteField(),
           inventoryDate:
             data.effectiveDate,
+          inventorySource: { ...files, id: token },
           revision:
             branchSnapshot.data()!.revision +
             1,
@@ -1042,6 +1051,7 @@ export async function execute(
         return {};
       }
 
+      const files = sourceFiles(data, "kpi");
       const months = data.months;
 
       if (
@@ -1167,6 +1177,13 @@ export async function execute(
                 month.amounts
               ),
               source: "import",
+              sourceFile: files.kpi,
+              amountSourceFile:
+                existingMonths.get(month.month)?.amounts &&
+                Object.keys(existingMonths.get(month.month).amounts).length
+                  ? existingMonths.get(month.month).amountSourceFile ||
+                    "舊資料未記錄檔名"
+                  : files.kpi,
               updatedBy: me,
               updatedAt: time()
             }
