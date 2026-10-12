@@ -1,0 +1,1136 @@
+import {
+  initializeApp,
+  deleteApp
+} from "firebase/app";
+
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  connectAuthEmulator
+} from "firebase/auth";
+
+import {
+  doc,
+  collection,
+  getDocs,
+  runTransaction,
+  writeBatch,
+  serverTimestamp,
+  getFirestore,
+  connectFirestoreEmulator,
+  deleteField
+} from "firebase/firestore";
+
+import {
+  auth,
+  db,
+  config,
+  loginEmail
+} from "./firebase";
+
+import {
+  normalizeUnits,
+  inventoryStats,
+  validDate,
+  taipeiDate
+} from "./domain.js";
+
+const time = () => serverTimestamp();
+
+const branch = (id: string) => {
+  if (!id || id.includes("/")) {
+    throw new Error("據點不合法");
+  }
+
+  return doc(db, "branches", id);
+};
+
+const uid = () => {
+  if (!auth.currentUser) {
+    throw new Error("請先登入");
+  }
+
+  return auth.currentUser.uid;
+};
+
+export async function execute(
+  name: string,
+  data: any
+): Promise<any> {
+  const me = uid();
+
+  switch (name) {
+    case "registerProfile": {
+      if (
+        auth.currentUser?.email !==
+        loginEmail(data.username)
+      ) {
+        throw new Error("帳號不符");
+      }
+
+      const ref = doc(db, "users", me);
+
+      await runTransaction(db, async (transaction) => {
+        const existing = await transaction.get(ref);
+
+        if (!existing.exists()) {
+          transaction.set(ref, {
+            username: data.username,
+            role: "pending",
+            branchIds: [],
+            mustChangePassword: false,
+            createdAt: time()
+          });
+        }
+      });
+
+      return {};
+    }
+
+    case "passwordChanged": {
+      const ref = doc(db, "users", me);
+      const batch = writeBatch(db);
+
+      batch.update(ref, {
+        mustChangePassword: false
+      });
+
+      await batch.commit();
+
+      return {};
+    }
+
+    case "manageUser": {
+      if (data.action === "create") {
+        const app = initializeApp(
+          config,
+          `create-user-${crypto.randomUUID()}`
+        );
+
+        try {
+          const otherAuth = getAuth(app);
+          const otherDb = getFirestore(app);
+
+          if (
+            import.meta.env.VITE_USE_EMULATORS === "true"
+          ) {
+            connectAuthEmulator(
+              otherAuth,
+              "http://127.0.0.1:9099",
+              { disableWarnings: true }
+            );
+
+            connectFirestoreEmulator(
+              otherDb,
+              "127.0.0.1",
+              8080
+            );
+          }
+
+          const user =
+            await createUserWithEmailAndPassword(
+              otherAuth,
+              loginEmail(data.username),
+              data.password
+            );
+
+          const batch = writeBatch(otherDb);
+
+          batch.set(
+            doc(otherDb, "users", user.user.uid),
+            {
+              username: data.username,
+              role: "pending",
+              branchIds: [],
+              mustChangePassword: true,
+              createdAt: time()
+            }
+          );
+
+          await batch.commit();
+        } finally {
+          await deleteApp(app);
+        }
+
+        return {};
+      }
+
+      const ref = doc(db, "users", data.uid);
+      const batch = writeBatch(db);
+
+      batch.update(ref, {
+        role: data.role,
+        branchIds: [...new Set(data.branchIds)],
+        updatedBy: me,
+        updatedAt: time()
+      });
+
+      await batch.commit();
+
+      return {};
+    }
+
+    case "saveBranch": {
+      const ref = data.id
+        ? branch(data.id)
+        : doc(collection(db, "branches"));
+
+      if (!String(data.name).trim()) {
+        throw new Error("請填寫據點名稱");
+      }
+
+      await runTransaction(db, async (transaction) => {
+        const old = await transaction.get(ref);
+
+        if (old.data()?.importing) {
+          throw new Error("據點正在匯入");
+        }
+
+        transaction.set(
+          ref,
+          {
+            name: String(data.name).trim(),
+            ...(!old.exists()
+              ? {
+                  total: 0,
+                  rented: 0,
+                  vacant: 0,
+                  revision: 0
+                }
+              : {}),
+            updatedAt: time()
+          },
+          { merge: true }
+        );
+      });
+
+      return { id: ref.id };
+    }
+
+    case "saveActivity": {
+      const ref = data.id
+        ? doc(
+            db,
+            "branches",
+            data.branchId,
+            "activities",
+            data.id
+          )
+        : doc(
+            collection(
+              db,
+              "branches",
+              data.branchId,
+              "activities"
+            )
+          );
+
+      if (
+        !/^\d{4}-(0[1-9]|1[0-2])$/.test(
+          data.month
+        ) ||
+        !String(data.name || "").trim()
+      ) {
+        throw new Error("活動月份與名稱必填");
+      }
+
+      const batch = writeBatch(db);
+
+      batch.set(
+        ref,
+        {
+          month: data.month,
+          name: String(data.name).trim(),
+          description: String(
+            data.description || ""
+          ),
+          archived: !!data.remove,
+          updatedBy: me,
+          updatedAt: time()
+        },
+        { merge: true }
+      );
+
+      await batch.commit();
+
+      return {};
+    }
+
+    case "recordEvent": {
+      const {
+        branchId,
+        code,
+        type,
+        date,
+        activityIds = []
+      } = data;
+
+      if (
+        !["new", "renew", "exit"].includes(type) ||
+        !validDate(date) ||
+        date > taipeiDate()
+      ) {
+        throw new Error("異動日期或類型不合法");
+      }
+
+      const branchDoc = branch(branchId);
+
+      const unitDoc = doc(
+        db,
+        "branches",
+        branchId,
+        "units",
+        code
+      );
+
+      const eventDoc = doc(
+        collection(
+          db,
+          "branches",
+          branchId,
+          "events"
+        )
+      );
+
+      const eventMonthDoc = doc(
+        db,
+        "branches",
+        branchId,
+        "months",
+        date.slice(0, 7)
+      );
+
+      const currentMonthDoc = doc(
+        db,
+        "branches",
+        branchId,
+        "months",
+        taipeiDate().slice(0, 7)
+      );
+
+      await runTransaction(db, async (transaction) => {
+        const [
+          branchSnapshot,
+          unitSnapshot,
+          monthSnapshot,
+          currentMonthSnapshot
+        ] = await Promise.all([
+          transaction.get(branchDoc),
+          transaction.get(unitDoc),
+          transaction.get(eventMonthDoc),
+          transaction.get(currentMonthDoc)
+        ]);
+
+        if (
+          !branchSnapshot.exists() ||
+          !unitSnapshot.exists()
+        ) {
+          throw new Error("據點或倉位不存在");
+        }
+
+        const unit = unitSnapshot.data();
+        const branchData = branchSnapshot.data();
+
+        if (branchData.importing) {
+          throw new Error("據點正在匯入");
+        }
+
+        if (unit.missing) {
+          throw new Error(
+            "消失的倉位請重新匯入確認"
+          );
+        }
+
+        if (
+          monthSnapshot.data()?.source === "import"
+        ) {
+          throw new Error(
+            "該月已有歷史 KPI，請先移除該月統計"
+          );
+        }
+
+        if (
+          (
+            type === "new" &&
+            unit.status !== "vacant"
+          ) ||
+          (
+            type !== "new" &&
+            unit.status !== "rented"
+          )
+        ) {
+          throw new Error(
+            "狀態已變更，請重新整理"
+          );
+        }
+
+        if (
+          unit.lastEventDate &&
+          date < unit.lastEventDate
+        ) {
+          throw new Error(
+            "日期不得早於該倉位上一筆異動"
+          );
+        }
+
+        const activities = [];
+
+        for (
+          const id of
+          [...new Set(activityIds)] as string[]
+        ) {
+          const activitySnapshot =
+            await transaction.get(
+              doc(
+                db,
+                "branches",
+                branchId,
+                "activities",
+                id
+              )
+            );
+
+          if (
+            !activitySnapshot.exists() ||
+            activitySnapshot.data().archived ||
+            activitySnapshot.data().month !==
+              date.slice(0, 7)
+          ) {
+            throw new Error(
+              "活動不適用於此月份"
+            );
+          }
+
+          activities.push({
+            id,
+            name: activitySnapshot.data().name
+          });
+        }
+
+        if (
+          type === "exit" &&
+          activities.length
+        ) {
+          throw new Error("退租不能使用優惠");
+        }
+
+        const delta =
+          type === "new"
+            ? 1
+            : type === "exit"
+              ? -1
+              : 0;
+
+        const rented =
+          branchData.rented + delta;
+
+        const vacant =
+          branchData.vacant - delta;
+
+        transaction.update(unitDoc, {
+          status:
+            type === "exit"
+              ? "vacant"
+              : "rented",
+          lastEventDate: date,
+          lastEventId: eventDoc.id,
+          updatedAt: time()
+        });
+
+        transaction.update(branchDoc, {
+          rented,
+          vacant,
+          revision: branchData.revision + 1,
+          updatedAt: time()
+        });
+
+        transaction.set(eventDoc, {
+          code,
+          type,
+          date,
+          month: date.slice(0, 7),
+          activities,
+          previousEventDate:
+            unit.lastEventDate || null,
+          previousEventId:
+            unit.lastEventId || null,
+          createdBy: me,
+          createdAt: time(),
+          voided: false
+        });
+
+        transaction.set(
+          eventMonthDoc,
+          {
+            source: "live",
+            [type]:
+              (
+                monthSnapshot.data()?.[type] ||
+                0
+              ) + 1,
+            updatedAt: time()
+          },
+          { merge: true }
+        );
+
+        if (
+          currentMonthSnapshot.data()?.source !==
+          "import"
+        ) {
+          transaction.set(
+            currentMonthDoc,
+            {
+              source: "live",
+              total: branchData.total,
+              rented,
+              snapshotDate: taipeiDate(),
+              updatedAt: time()
+            },
+            { merge: true }
+          );
+        }
+      });
+
+      return {};
+    }
+
+    case "voidEvent": {
+      const branchDoc = branch(data.branchId);
+
+      const eventDoc = doc(
+        db,
+        "branches",
+        data.branchId,
+        "events",
+        data.eventId
+      );
+
+      await runTransaction(db, async (transaction) => {
+        const [
+          branchSnapshot,
+          eventSnapshot
+        ] = await Promise.all([
+          transaction.get(branchDoc),
+          transaction.get(eventDoc)
+        ]);
+
+        if (
+          !eventSnapshot.exists() ||
+          eventSnapshot.data().voided ||
+          branchSnapshot.data()?.importing
+        ) {
+          throw new Error(
+            "異動不存在、已撤銷或據點正在匯入"
+          );
+        }
+
+        const event = eventSnapshot.data();
+
+        const unitDoc = doc(
+          db,
+          "branches",
+          data.branchId,
+          "units",
+          event.code
+        );
+
+        const eventMonthDoc = doc(
+          db,
+          "branches",
+          data.branchId,
+          "months",
+          event.month
+        );
+
+        const currentMonthDoc = doc(
+          db,
+          "branches",
+          data.branchId,
+          "months",
+          taipeiDate().slice(0, 7)
+        );
+
+        const [
+          unitSnapshot,
+          monthSnapshot,
+          currentMonthSnapshot
+        ] = await Promise.all([
+          transaction.get(unitDoc),
+          transaction.get(eventMonthDoc),
+          transaction.get(currentMonthDoc)
+        ]);
+
+        if (
+          !unitSnapshot.exists() ||
+          unitSnapshot.data().lastEventId !==
+            data.eventId
+        ) {
+          throw new Error(
+            "只能撤銷該倉位最後一筆異動"
+          );
+        }
+
+        if (
+          monthSnapshot.data()?.source ===
+          "import"
+        ) {
+          throw new Error(
+            "該月已匯入歷史 KPI"
+          );
+        }
+
+        const delta =
+          event.type === "new"
+            ? -1
+            : event.type === "exit"
+              ? 1
+              : 0;
+
+        const old = branchSnapshot.data()!;
+
+        transaction.update(unitDoc, {
+          status:
+            event.type === "new"
+              ? "vacant"
+              : "rented",
+          lastEventId: event.previousEventId,
+          lastEventDate:
+            event.previousEventDate,
+          updatedAt: time()
+        });
+
+        transaction.update(eventDoc, {
+          voided: true,
+          voidedBy: me,
+          voidedAt: time()
+        });
+
+        transaction.update(branchDoc, {
+          rented: old.rented + delta,
+          vacant: old.vacant - delta,
+          revision: old.revision + 1,
+          updatedAt: time()
+        });
+
+        transaction.set(
+          eventMonthDoc,
+          {
+            [event.type]:
+              (
+                monthSnapshot.data()?.[
+                  event.type
+                ] || 0
+              ) - 1
+          },
+          { merge: true }
+        );
+
+        if (
+          currentMonthSnapshot.data()?.source !==
+          "import"
+        ) {
+          transaction.set(
+            currentMonthDoc,
+            {
+              source: "live",
+              total: old.total,
+              rented: old.rented + delta,
+              snapshotDate: taipeiDate()
+            },
+            { merge: true }
+          );
+        }
+      });
+
+      return {};
+    }
+
+    case "saveUnit": {
+      const unit = normalizeUnits([
+        {
+          ...data,
+          price: Number(data.price || 0)
+        }
+      ])[0];
+
+      const branchDoc = branch(data.branchId);
+
+      const unitDoc = doc(
+        db,
+        "branches",
+        data.branchId,
+        "units",
+        unit.code
+      );
+
+      const monthDoc = doc(
+        db,
+        "branches",
+        data.branchId,
+        "months",
+        taipeiDate().slice(0, 7)
+      );
+
+      await runTransaction(db, async (transaction) => {
+        const [
+          branchSnapshot,
+          unitSnapshot,
+          monthSnapshot
+        ] = await Promise.all([
+          transaction.get(branchDoc),
+          transaction.get(unitDoc),
+          transaction.get(monthDoc)
+        ]);
+
+        if (
+          !branchSnapshot.exists() ||
+          branchSnapshot.data().importing
+        ) {
+          throw new Error(
+            "據點不存在或正在匯入"
+          );
+        }
+
+        const old = branchSnapshot.data();
+        let delta = 0;
+
+        if (data.remove) {
+          if (
+            !unitSnapshot.exists() ||
+            unitSnapshot.data().status ===
+              "rented"
+          ) {
+            throw new Error(
+              "已出租倉位須先退租"
+            );
+          }
+
+          delta =
+            unitSnapshot.data().missing
+              ? 0
+              : -1;
+
+          transaction.delete(unitDoc);
+        } else {
+          delta = unitSnapshot.exists()
+            ? 0
+            : 1;
+
+          transaction.set(
+            unitDoc,
+            {
+              ...unit,
+              ...(!unitSnapshot.exists()
+                ? {
+                    status: "vacant",
+                    missing: false,
+                    lastEventDate:
+                      taipeiDate(),
+                    lastEventId: null
+                  }
+                : {}),
+              updatedAt: time()
+            },
+            { merge: true }
+          );
+        }
+
+        transaction.update(branchDoc, {
+          total: old.total + delta,
+          vacant: old.vacant + delta,
+          revision: old.revision + 1,
+          updatedAt: time()
+        });
+
+        if (
+          monthSnapshot.data()?.source !==
+          "import"
+        ) {
+          transaction.set(
+            monthDoc,
+            {
+              source: "live",
+              total: old.total + delta,
+              rented: old.rented,
+              snapshotDate: taipeiDate()
+            },
+            { merge: true }
+          );
+        }
+      });
+
+      return {};
+    }
+
+    case "importInventory": {
+      const units = normalizeUnits(data.units);
+
+      const codes = new Set(
+        units.map((unit) => unit.code)
+      );
+
+      const vacant = new Set<string>(
+        data.vacantCodes
+      );
+
+      if (
+        vacant.size !==
+          data.vacantCodes.length ||
+        [...vacant].some(
+          (code) => !codes.has(code)
+        )
+      ) {
+        throw new Error(
+          "空倉重複或不存在於總倉表"
+        );
+      }
+
+      if (
+        !validDate(data.effectiveDate) ||
+        data.effectiveDate > taipeiDate()
+      ) {
+        throw new Error("盤點日期不合法");
+      }
+
+      const branchDoc = branch(data.branchId);
+      const token = crypto.randomUUID();
+
+      await runTransaction(db, async (transaction) => {
+        const snapshot =
+          await transaction.get(branchDoc);
+
+        if (!snapshot.exists()) {
+          throw new Error("據點不存在");
+        }
+
+        const lock = snapshot.data().importing;
+
+        if (
+          lock &&
+          Date.now() - lock.startedAt <
+            600000
+        ) {
+          throw new Error(
+            "匯入正在執行，若已中斷請十分鐘後重試"
+          );
+        }
+
+        transaction.update(branchDoc, {
+          importing: {
+            token,
+            by: me,
+            startedAt: Date.now()
+          },
+          revision:
+            snapshot.data().revision + 1
+        });
+      });
+
+      const old = await getDocs(
+        collection(
+          db,
+          "branches",
+          data.branchId,
+          "units"
+        )
+      );
+
+      const all: any[] = units.map(
+        (unit) => ({
+          ...unit,
+          status: vacant.has(unit.code)
+            ? "vacant"
+            : "rented",
+          missing: false,
+          lastEventDate:
+            data.effectiveDate,
+          lastEventId: null
+        })
+      );
+
+      for (const existing of old.docs) {
+        if (!codes.has(existing.id)) {
+          all.push({
+            ...existing.data(),
+            code: existing.id,
+            missing: true
+          });
+        }
+      }
+
+      for (
+        let index = 0;
+        index < all.length;
+        index += 350
+      ) {
+        const batch = writeBatch(db);
+
+        for (
+          const unit of
+          all.slice(index, index + 350)
+        ) {
+          batch.set(
+            doc(
+              db,
+              "branches",
+              data.branchId,
+              "units",
+              unit.code
+            ),
+            {
+              ...unit,
+              updatedAt: time()
+            }
+          );
+        }
+
+        await batch.commit();
+      }
+
+      const stats = inventoryStats(all);
+
+      const monthDoc = doc(
+        db,
+        "branches",
+        data.branchId,
+        "months",
+        taipeiDate().slice(0, 7)
+      );
+
+      await runTransaction(db, async (transaction) => {
+        const [
+          branchSnapshot,
+          monthSnapshot
+        ] = await Promise.all([
+          transaction.get(branchDoc),
+          transaction.get(monthDoc)
+        ]);
+
+        if (
+          branchSnapshot.data()?.importing
+            ?.token !== token
+        ) {
+          throw new Error(
+            "匯入鎖定已變更"
+          );
+        }
+
+        transaction.update(branchDoc, {
+          ...stats,
+          importing: deleteField(),
+          inventoryDate:
+            data.effectiveDate,
+          revision:
+            branchSnapshot.data()!.revision +
+            1,
+          updatedAt: time()
+        });
+
+        if (
+          monthSnapshot.data()?.source !==
+          "import"
+        ) {
+          transaction.set(
+            monthDoc,
+            {
+              source: "live",
+              total: stats.total,
+              rented: stats.rented,
+              snapshotDate: taipeiDate()
+            },
+            { merge: true }
+          );
+        }
+
+        transaction.set(
+          doc(
+            collection(
+              db,
+              "branches",
+              data.branchId,
+              "imports"
+            )
+          ),
+          {
+            ...stats,
+            effectiveDate:
+              data.effectiveDate,
+            missing: all
+              .filter(
+                (unit) => unit.missing
+              )
+              .map(
+                (unit) => unit.code
+              ),
+            by: me,
+            createdAt: time()
+          }
+        );
+      });
+
+      return stats;
+    }
+
+    case "importKpi": {
+      const branchDoc = branch(data.branchId);
+
+      if (data.removeMonth) {
+        await runTransaction(
+          db,
+          async (transaction) => {
+            const ref = doc(
+              db,
+              "branches",
+              data.branchId,
+              "months",
+              data.removeMonth
+            );
+
+            const snapshot =
+              await transaction.get(ref);
+
+            if (
+              snapshot.data()?.source !==
+              "import"
+            ) {
+              throw new Error(
+                "只能移除歷史匯入統計"
+              );
+            }
+
+            transaction.delete(ref);
+          }
+        );
+
+        return {};
+      }
+
+      const months = data.months;
+
+      if (
+        !Array.isArray(months) ||
+        !months.length ||
+        months.length > 240
+      ) {
+        throw new Error(
+          "KPI 資料筆數不合法"
+        );
+      }
+
+      const seen = new Set();
+
+      for (const month of months) {
+        if (
+          !/^\d{4}-(0[1-9]|1[0-2])$/.test(
+            month.month
+          ) ||
+          month.month >=
+            taipeiDate().slice(0, 7) ||
+          seen.has(month.month)
+        ) {
+          throw new Error(
+            "只能匯入不重複且已結算月份"
+          );
+        }
+
+        seen.add(month.month);
+
+        for (const key of [
+          "total",
+          "rented",
+          "new",
+          "renew",
+          "exit"
+        ]) {
+          if (
+            month[key] !== null &&
+            (
+              !Number.isInteger(
+                month[key]
+              ) ||
+              month[key] < 0
+            )
+          ) {
+            throw new Error(
+              `${month.month} 數字不合法`
+            );
+          }
+        }
+
+        if (
+          month.total === null ||
+          month.rented === null ||
+          month.rented > month.total
+        ) {
+          throw new Error(
+            `${month.month} 總倉或出租數不完整`
+          );
+        }
+      }
+
+      await runTransaction(db, async (transaction) => {
+        const snapshot =
+          await transaction.get(branchDoc);
+
+        if (
+          !snapshot.exists() ||
+          snapshot.data().importing
+        ) {
+          throw new Error(
+            "據點不存在或正在匯入"
+          );
+        }
+
+        for (const month of months) {
+          const old =
+            await transaction.get(
+              doc(
+                db,
+                "branches",
+                data.branchId,
+                "months",
+                month.month
+              )
+            );
+
+          if (
+            old.exists() &&
+            old.data().source !== "import"
+          ) {
+            throw new Error(
+              `${month.month} 已有即時紀錄，不能覆蓋`
+            );
+          }
+        }
+
+        for (const month of months) {
+          transaction.set(
+            doc(
+              db,
+              "branches",
+              data.branchId,
+              "months",
+              month.month
+            ),
+            {
+              month: month.month,
+              total: month.total,
+              rented: month.rented,
+              new: month.new,
+              renew: month.renew,
+              exit: month.exit,
+              source: "import",
+              updatedBy: me,
+              updatedAt: time()
+            }
+          );
+        }
+      });
+
+      return {};
+    }
+
+    default:
+      throw new Error("未知操作");
+  }
+}
