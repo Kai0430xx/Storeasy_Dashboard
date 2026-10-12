@@ -1,3 +1,4 @@
+import ImportSources from "./ImportSources";
 import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
@@ -271,11 +272,13 @@ function App() {
   );
 
   const units: Row[] = visible.flatMap((branch) =>
-    (data[branch.id]?.units || []).map((unit) => ({
-      ...unit,
-      branchId: branch.id,
-      branchName: branch.name,
-    })),
+    (data[branch.id]?.units || [])
+      .filter((unit) => !unit.archived)
+      .map((unit) => ({
+        ...unit,
+        branchId: branch.id,
+        branchName: branch.name,
+      })),
   );
 
   const events: Row[] = visible.flatMap((branch) =>
@@ -1388,6 +1391,19 @@ function App() {
                     </p>
                   )}
 
+                  <ImportSources
+                    branches={visible}
+                    data={data}
+                    canWrite={!!canWrite}
+                    busy={busy}
+                    onRemove={(payload) =>
+                      run(
+                        () => call("removeImport", payload),
+                        "匯入資料已移除",
+                      )
+                    }
+                  />
+
                   <section className="panel">
                     <div className="panel-heading">
                       <h2>歷史統計資料</h2>
@@ -2382,6 +2398,8 @@ function ImportForm({
 
               setPreview({
                 units: all,
+                totalFile: (form.get("all") as File).name,
+                vacantFile: (form.get("vacant") as File).name,
                 vacantCodes: vacant,
                 effectiveDate: form.get("date"),
                 missing: units
@@ -2396,6 +2414,7 @@ function ImportForm({
               );
 
               setPreview({
+                kpiFile: (form.get("kpi") as File).name,
                 months: months.filter(
                   (item: Row) =>
                     item.month < today().slice(0, 7),
