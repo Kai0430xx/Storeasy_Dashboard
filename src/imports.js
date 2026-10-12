@@ -190,11 +190,9 @@ export function parseUnits(
         ? number(row[priceIndex], `倉位 ${code} 月租`, true)
         : 0,
 
-      note: noteIndex < 0 ? "" : String(row[noteIndex] ?? "")
+            note: noteIndex < 0 ? "" : String(row[noteIndex] ?? "")
     };
   });
-}
-  return result;
 }
 
 export function parseKpi(book) {
