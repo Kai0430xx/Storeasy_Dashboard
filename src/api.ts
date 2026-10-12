@@ -186,7 +186,7 @@ export async function execute(
       }
 
       await runTransaction(db, async (transaction) => {
-        conconst old = await transaction.get(ref);
+        const old = await transaction.get(ref);
 
         if (old.data()?.importing) {
           throw new Error("據點正在匯入");
