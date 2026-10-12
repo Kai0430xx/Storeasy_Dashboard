@@ -71,7 +71,8 @@ export async function workbook(buffer) {
 
 export function parseUnits(
   book,
-  sheetName = book.SheetNames[0]
+  sheetName = book.SheetNames[0],
+  options = { requirePrice: true }
 ) {
   const raw = book.Sheets[sheetName];
 
@@ -79,69 +80,120 @@ export function parseUnits(
     throw new Error("工作表沒有資料");
   }
 
-  const keys = raw[0].map(
-    (key) => String(key || "")
-  );
+  const normalize = value =>
+    String(value ?? "")
+      .normalize("NFKC")
+      .replace(/\s/g, "")
+      .replace(/\((?:NT\$|NTD|元|新臺幣|新台幣)\)/gi, "");
 
-  if (!keys.includes("倉位")) {
+  const headers = raw[0].map(normalize);
+
+  const column = names => {
+    for (const name of names) {
+      const index = headers.indexOf(normalize(name));
+      if (index !== -1) return index;
+    }
+    return -1;
+  };
+
+  const codeIndex = column(["倉位", "倉位編號", "倉號"]);
+
+  if (codeIndex < 0) {
     throw new Error("缺少「倉位」欄位");
   }
 
-  const rows = raw.slice(1).map((row) =>
-    Object.fromEntries(
-      raw[0].map((key, index) => [
-        String(key || ""),
-        row[index] ?? ""
-      ])
-    )
-  );
-
-  const result = rows
-    .filter(
-      (row) => String(row["倉位"]).trim()
-    )
-    .map((row) => ({
-      code: String(row["倉位"]).trim(),
-      dimensions: String(
-        row["尺寸 W*L*H"] ||
-        row["尺寸"] ||
-        ""
-      ),
-      volume: Number(row["材積"] || 0),
-      unitPrice: Number(row["單價"] || 0),
-      price: Number(
-        row["月租"] || row["金額"] || 0
-      ),
-      note: String(row["備註"] || "")
-    }));
+  const entries = raw
+    .slice(1)
+    .filter(row => String(row[codeIndex] ?? "").trim());
 
   const seen = new Set();
 
-  for (const unit of result) {
-    if (seen.has(unit.code)) {
-      throw new Error(
-        `倉位重複：${unit.code}`
-      );
+  for (const row of entries) {
+    const code = String(row[codeIndex]).trim();
+
+    if (seen.has(code)) {
+      throw new Error(`倉位重複：${code}`);
     }
 
-    seen.add(unit.code);
-
-    if (
-      [
-        unit.volume,
-        unit.unitPrice,
-        unit.price
-      ].some(
-        (value) =>
-          !Number.isFinite(value) || value < 0
-      )
-    ) {
-      throw new Error(
-        `倉位 ${unit.code} 數值不合法`
-      );
-    }
+    seen.add(code);
   }
 
+  if (!entries.length) return [];
+
+  const priceIndex = column([
+    "月租",
+    "月租金",
+    "月租金額",
+    "原價",
+    "月繳",
+    "金額"
+  ]);
+
+  if (options.requirePrice && priceIndex < 0) {
+    throw new Error(
+      "找不到月租金額欄位。請使用「月租、月租金、原價、月繳」其中一種欄名。"
+    );
+  }
+
+  const dimensionsIndex = column([
+    "尺寸 W*L*H",
+    "尺寸",
+    "尺寸W×L×H"
+  ]);
+
+  const volumeIndex = column(["材積", "材積數"]);
+  const unitPriceIndex = column(["單價"]);
+  const noteIndex = column(["備註"]);
+
+  const number = (value, label, required = false) => {
+    const text = String(value ?? "").normalize("NFKC").trim();
+
+    if (!text) {
+      if (required) {
+        throw new Error(`${label} 空白，請補齊金額再匯入`);
+      }
+      return 0;
+    }
+
+    const cleaned = text.replace(
+      /NT\$|NTD|TWD|新臺幣|新台幣|元|[$,\s]/gi,
+      ""
+    );
+
+    const result = Number(cleaned);
+
+    if (!cleaned || !Number.isFinite(result) || result < 0) {
+      throw new Error(`${label} 數值不合法：${text}`);
+    }
+
+    return result;
+  };
+
+  return entries.map(row => {
+    const code = String(row[codeIndex]).trim();
+
+    return {
+      code,
+      dimensions:
+        dimensionsIndex < 0
+          ? ""
+          : String(row[dimensionsIndex] ?? ""),
+
+      volume: number(row[volumeIndex], `倉位 ${code} 材積`),
+
+      unitPrice: number(
+        row[unitPriceIndex],
+        `倉位 ${code} 單價`
+      ),
+
+      price: options.requirePrice
+        ? number(row[priceIndex], `倉位 ${code} 月租`, true)
+        : 0,
+
+      note: noteIndex < 0 ? "" : String(row[noteIndex] ?? "")
+    };
+  });
+}
   return result;
 }
 
