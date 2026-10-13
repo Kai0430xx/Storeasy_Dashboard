@@ -1,3 +1,4 @@
+import {OtherGoalEditor,OtherGoalResults} from './OtherGoals';
 import { effectiveMonths } from "./actuals.js";
 import GoalsOverview from "./GoalsOverview";
 import {useEffect,useState} from 'react';
@@ -54,6 +55,7 @@ export default function Targets({branches,month,profile,data}:{branches:Row[];mo
      {(monthly?.occupancy!=null)&&<tr><td>出租率</td><td>{monthly?.occupancy==null?'未設定':percent(monthly.occupancy)}</td><td>{percent(occupancy)}</td><td>{result(occupancy,monthly?.occupancy)}</td></tr>}
      {(monthly?.performance!=null)&&<tr><td>業績完成率</td><td>{monthly?.performance==null?'未設定':percent(monthly.performance)}</td><td>{percent(metrics.performance)}</td><td>{result(metrics.performance,monthly?.performance)}</td></tr>}
      {(monthly?.referrals!=null||ref?.count>0)&&<tr><td>轉介數量</td><td>{monthly?.referrals??'未設定'}</td><td>{ref?.count??'未填寫'} {ref?.count>3&&<span className="referral-bonus">超過 3 筆・年終加成</span>}</td><td>{result(ref?.count,monthly?.referrals)}{monthly?.referrals!=null&&!ref&&'・必填'}</td></tr>}
+     {Object.keys(monthly?.other||{}).length>0&&<tr><td>其它</td><td colSpan={3}><OtherGoalResults goals={monthly.other} actuals={r.actuals?.find((a:Row)=>a.id===month)?.other} future={month>today.slice(0,7)}/></td></tr>}
     </tbody></table></div>
     <p className="hint">KPI 來源：{kpi?.sourceFile||'待匯入'}。{metrics.revenue!=null&&`當年當月業績：NT$ ${Number(metrics.revenue).toLocaleString()}`} 舊 KPI 若未含完成率，請重新匯入原檔。</p>
     <h3>{year} 年度目標</h3>
@@ -74,11 +76,12 @@ export default function Targets({branches,month,profile,data}:{branches:Row[];mo
   </details>
   {editing&&<div className="modal-backdrop"><section className="modal" role="dialog" aria-modal="true" aria-label={editing.kind==='goal'?'設定目標':'填寫轉介'}><button disabled={busy} aria-label="關閉" onClick={()=>setEditing(null)}>×</button><h2>{editing.branch.name}・{editing.period||month}</h2>
    {error&&<div role="alert">{error}</div>}
-   {editing.kind==='goal'?<form onSubmit={e=>{e.preventDefault();const v=Object.fromEntries(new FormData(e.currentTarget));run(()=>saveGoal(editing.branch.id,editing.period,v));}}>
+   {editing.kind==='goal'?<form onSubmit={e=>{e.preventDefault();const v=Object.fromEntries(new FormData(e.currentTarget));run(()=>saveGoal(editing.branch.id,editing.period,{...v,other:editing.values.other||{}}));}}>
     <p>留白代表未設定；百分比請輸入 80，表示 80%。</p>
     <label>出租率目標（%）<input name="occupancy" type="number" min="0" max="100" step="0.01" defaultValue={editing.values.occupancy??''}/></label>
     <label>業績完成率目標（%）<input name="performance" type="number" min="0" step="0.01" defaultValue={editing.values.performance??''}/></label>
     <label>轉介數量目標<input name="referrals" type="number" min="0" step="1" defaultValue={editing.values.referrals??''}/></label>
+    {editing.period.length===7&&<OtherGoalEditor value={editing.values.other||{}} disabled={busy} onChange={other=>setEditing(v=>v?{...v,values:{...v.values,other}}:v)}/>}
     <button className="primary" disabled={busy}>儲存目標</button>
    </form>:<form onSubmit={e=>{e.preventDefault();run(()=>saveReferrals(editing.branch.id,month,entries));}}>
     <p>轉介 {entries.length} 筆 {entries.length>3?'・超過 3 間，年終加成':''}</p>
@@ -86,7 +89,7 @@ export default function Targets({branches,month,profile,data}:{branches:Row[];mo
     <button type="button" disabled={entries.length>=200} onClick={()=>setEntries(v=>[...v,{code:'',leasePeriod:''}])}>新增轉介明細</button><button className="primary" disabled={busy}>儲存 {entries.length} 筆轉介</button>
    </form>}
   </section></div>}
-  {history&&<div className="modal-backdrop"><section className="modal" role="dialog" aria-modal="true" aria-label="目標修改紀錄"><button aria-label="關閉" onClick={()=>setHistory(null)}>×</button><h2>{history.branch.name}・目標修改紀錄</h2>{history.items.sort((a:Row,b:Row)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)).map((h:Row)=><div key={h.id}><strong>{h.period} 第 {h.next.revision} 次設定</strong><p>{h.createdAt?.toDate?.().toLocaleString('zh-TW',{timeZone:'Asia/Taipei'})}・操作帳號 UID：{h.by}</p>{['occupancy','performance','referrals'].map(k=><p key={k}>{({occupancy:'出租率',performance:'業績完成率',referrals:'轉介數量'} as Row)[k]}：{h.previous?.[k]??'未設定'} → {h.next[k]??'未設定'}</p>)}</div>)}{!history.items.length&&<p>尚無修改紀錄</p>}</section></div>}
+  {history&&<div className="modal-backdrop"><section className="modal" role="dialog" aria-modal="true" aria-label="目標修改紀錄"><button aria-label="關閉" onClick={()=>setHistory(null)}>×</button><h2>{history.branch.name}・目標修改紀錄</h2>{history.items.sort((a:Row,b:Row)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)).map((h:Row)=><div key={h.id}><strong>{h.period} 第 {h.next.revision} 次設定</strong><p>{h.createdAt?.toDate?.().toLocaleString('zh-TW',{timeZone:'Asia/Taipei'})}・操作帳號 UID：{h.by}</p>{['occupancy','performance','referrals'].map(k=><p key={k}>{({occupancy:'出租率',performance:'業績完成率',referrals:'轉介數量'} as Row)[k]}：{h.previous?.[k]??'未設定'} → {h.next[k]??'未設定'}</p>)}<p>其它目標（修改前）</p><OtherGoalResults goals={h.previous?.other}/><p>其它目標（修改後）</p><OtherGoalResults goals={h.next.other}/></div>)}{!history.items.length&&<p>尚無修改紀錄</p>}</section></div>}
  </>;
 }
 export function VacancyCell({unit,editable}:{unit:Row;editable:boolean}){
@@ -100,3 +103,5 @@ export function OperationsInsights({units,events}:{units:Row[];events:Row[]}){
  const today=taipeiDate(),vacant=units.filter(u=>u.status==='vacant'&&!u.archived&&!u.missing),exits=events.filter(e=>e.type==='exit'&&!e.voided);
  return <section className="panel target-panel"><h2>空倉與退租概況</h2><p>空倉 {vacant.length} 間・起始日未記錄 {vacant.filter(u=>vacantDays(u,today)==null).length} 間</p><p>空置至少 30 天：{vacant.filter(u=>(vacantDays(u,today)??-1)>=30).length} 間・至少 60 天：{vacant.filter(u=>(vacantDays(u,today)??-1)>=60).length} 間・至少 90 天：{vacant.filter(u=>(vacantDays(u,today)??-1)>=90).length} 間（區間包含較長天數）</p><h3>所選月份退租原因</h3>{[...exitCategories,'未分類'].map(c=><span key={c} className="badge">{c}：{exits.filter(e=>(e.exitCategory||'未分類')===c).length} 筆 </span>)}</section>;
 }
+
+// storeasy-other-monthly-v1

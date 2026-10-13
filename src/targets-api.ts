@@ -1,3 +1,4 @@
+import {normalizeOtherGoals} from './other-goals.js';
 import {collection,doc,getDoc,runTransaction,serverTimestamp} from 'firebase/firestore';
 import {auth,db} from './firebase';
 import {parseLease} from './lease.js';
@@ -20,6 +21,7 @@ export async function saveGoal(branchId:string,period:string,values:any,preserve
         goal[k] = old.data()?.[k] ?? null;
     }
   }
+  goal.other=period.length===7?normalizeOtherGoals(values.other??old.data()?.other??{}):{};
   const next={...goal,period,revision:(old.data()?.revision||0)+1,updatedBy:uid,updatedAt:serverTimestamp(),changeId:audit.id};
   t.set(ref,next);t.set(audit,{period,previous:old.data()||null,next,by:uid,createdAt:serverTimestamp()});
  });
@@ -44,3 +46,5 @@ export async function saveVacantSince(branchId:string,code:string,date:string){
  const ref=doc(db,'branches',branchId,'units',code);
  await runTransaction(db,async t=>{const s=await t.get(ref);if(s.data()?.status!=='vacant'||s.data()?.missing||s.data()?.archived)throw new Error('倉位已變更，請重新整理');t.update(ref,{vacantSince:date||null,updatedAt:serverTimestamp()});});
 }
+
+// storeasy-other-monthly-v1

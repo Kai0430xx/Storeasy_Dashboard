@@ -455,3 +455,11 @@ button.flow-row:hover { background:#f4f7fb; }
     padding: 14px;
   }
 }
+
+/* Multiple monthly other goals. */
+.other-goals-editor { min-width: 260px; white-space: normal; }
+.other-goal-row { padding: 8px 0; border-bottom: 1px solid var(--line, #e5eaf0); }
+.other-goal-row input { width: 100%; }
+.modal[aria-label="本月實際數值與轉介"] { width: min(800px, calc(100vw - 24px)); max-height: 94dvh; overflow-y: auto; }
+
+/* storeasy-other-monthly-v1 */

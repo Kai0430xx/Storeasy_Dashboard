@@ -456,9 +456,56 @@ service cloud.firestore {
           && resource.data.source == 'import';
       }
 
+   function validOtherGoalItem(items,k) {
+    let v=items.get(k,null);
+    return !(k in items) || (v is map
+     && v.keys().hasOnly(['id','name','target'])
+     && v.id is string && v.id.matches('[a-zA-Z0-9_-]{1,80}')
+     && v.name is string && v.name.size() > 0 && v.name.size() <= 80
+     && v.target is number && v.target >= 0 && v.target <= 1000000000);
+   }
+   function validOtherGoals(items) {
+    return items is map && items.keys().hasOnly(['o0', 'o1', 'o2', 'o3', 'o4', 'o5', 'o6', 'o7', 'o8', 'o9'])
+     && validOtherGoalItem(items,'o0')
+     && validOtherGoalItem(items,'o1')
+     && validOtherGoalItem(items,'o2')
+     && validOtherGoalItem(items,'o3')
+     && validOtherGoalItem(items,'o4')
+     && validOtherGoalItem(items,'o5')
+     && validOtherGoalItem(items,'o6')
+     && validOtherGoalItem(items,'o7')
+     && validOtherGoalItem(items,'o8')
+     && validOtherGoalItem(items,'o9');
+   }
+   function validOtherActualItem(items,goals,k) {
+    let v=items.get(k,null);
+    let g=goals.get(k,null);
+    return !(k in items) || (g != null && v is map
+     && v.keys().hasOnly(['goalId','value']) && v.goalId == g.id
+     && v.value is number && v.value >= 0 && v.value <= 1000000000);
+   }
+   function validOtherActualValues(items,goals) {
+    return items is map && items.keys().hasOnly(['o0', 'o1', 'o2', 'o3', 'o4', 'o5', 'o6', 'o7', 'o8', 'o9'])
+     && validOtherActualItem(items,goals,'o0')
+     && validOtherActualItem(items,goals,'o1')
+     && validOtherActualItem(items,goals,'o2')
+     && validOtherActualItem(items,goals,'o3')
+     && validOtherActualItem(items,goals,'o4')
+     && validOtherActualItem(items,goals,'o5')
+     && validOtherActualItem(items,goals,'o6')
+     && validOtherActualItem(items,goals,'o7')
+     && validOtherActualItem(items,goals,'o8')
+     && validOtherActualItem(items,goals,'o9');
+   }
+   function validOtherActuals(d,month) {
+    return !('other' in d) || (d.other is map && d.other.size() == 0)
+     || (exists(/databases/$(database)/documents/branches/$(id)/targets/$(month))
+       && validOtherActualValues(d.other,get(/databases/$(database)/documents/branches/$(id)/targets/$(month)).data.other));
+   }
    match /targets/{period} {
     function validGoal(d) {
-     return d.keys().hasOnly(['period','occupancy','performance','referrals','revision','updatedBy','updatedAt','changeId'])
+     return d.keys().hasOnly(['period','occupancy','performance','referrals','other','revision','updatedBy','updatedAt','changeId'])
+      && (!('other' in d) || (validOtherGoals(d.other) && (period.size() == 7 || d.other.size() == 0)))
       && d.period == period && period.matches('20[0-9]{2}(-(0[1-9]|1[0-2]))?')
       && (d.occupancy == null || (positive(d.occupancy) && d.occupancy <= 100))
       && (d.performance == null || positive(d.performance))
@@ -500,9 +547,10 @@ service cloud.firestore {
    match /actuals/{month} {
     function validActual(d) {
      return month.matches('20[0-9]{2}-(0[1-9]|1[0-2])') && d.month == month
-      && d.keys().hasOnly(['month','occupancy','performance','reason','revision','changeId','updatedBy','updatedAt'])
+      && d.keys().hasOnly(['month','occupancy','performance','other','reason','revision','changeId','updatedBy','updatedAt'])
       && (d.occupancy == null || (positive(d.occupancy) && d.occupancy <= 100))
       && (d.performance == null || positive(d.performance))
+      && validOtherActuals(d,month)
       && d.reason is string && d.reason.size() <= 500
       && ((d.occupancy == null && d.performance == null) || d.reason.size() > 0)
       && d.revision is int && d.revision > 0 && d.changeId is string
@@ -544,3 +592,5 @@ service cloud.firestore {
     }
   }
 }
+
+// storeasy-other-monthly-v1
