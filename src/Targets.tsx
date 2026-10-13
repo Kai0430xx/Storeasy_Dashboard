@@ -1,3 +1,4 @@
+import GoalsOverview from "./GoalsOverview";
 import {useEffect,useState} from 'react';
 import {collection,onSnapshot} from 'firebase/firestore';
 import {db} from './firebase';
@@ -18,6 +19,16 @@ export default function Targets({branches,month,profile,data}:{branches:Row[];mo
   <header className="page-header"><div><p>依上方選取月份查看月度目標及該年度進度。目標修改會保留紀錄。</p></div></header>
   {error&&<div role="alert" className="alert error">{error}</div>}{notice&&<div role="status" className="alert success">{notice}</div>}
   {!branches.length&&<p>尚無可查看據點</p>}
+  <GoalsOverview
+    branches={branches}
+    records={records}
+    data={data}
+    month={month}
+    global={global}
+    onEdit={setEditing}
+  />
+  <details>
+    <summary>各據點詳細資料與轉介填寫（點此展開）</summary>
   {branches.map(b=>{
    const r=records[b.id]||{},goals=r.targets||[],refs=r.referrals||[];
    const monthly=goals.find((g:Row)=>g.id===month),annual=goals.find((g:Row)=>g.id===year),ref=refs.find((v:Row)=>v.id===month);
@@ -49,6 +60,7 @@ export default function Targets({branches,month,profile,data}:{branches:Row[];mo
     <div className="table-wrap"><table><thead><tr><th>倉位編號</th><th>租期</th></tr></thead><tbody>{ref?.entries?.map((e:Row,i:number)=><tr key={i}><td>{e.code}</td><td>{e.leasePeriod}</td></tr>)}</tbody></table></div>
    </section>;
   })}
+  </details>
   {editing&&<div className="modal-backdrop"><section className="modal" role="dialog" aria-modal="true" aria-label={editing.kind==='goal'?'設定目標':'填寫轉介'}><button disabled={busy} aria-label="關閉" onClick={()=>setEditing(null)}>×</button><h2>{editing.branch.name}・{editing.period||month}</h2>
    {error&&<div role="alert">{error}</div>}
    {editing.kind==='goal'?<form onSubmit={e=>{e.preventDefault();const v=Object.fromEntries(new FormData(e.currentTarget));run(()=>saveGoal(editing.branch.id,editing.period,v));}}>

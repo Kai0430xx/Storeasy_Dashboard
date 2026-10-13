@@ -2,7 +2,7 @@ import {collection,doc,getDoc,runTransaction,serverTimestamp} from 'firebase/fir
 import {auth,db} from './firebase';
 import {parseLease} from './lease.js';
 import {taipeiDate,validDate} from './domain.js';
-export async function saveGoal(branchId:string,period:string,values:any){
+export async function saveGoal(branchId:string,period:string,values:any,preserveEmpty=false){
  if(!/^(20\d{2}|20\d{2}-(0[1-9]|1[0-2]))$/.test(period))throw new Error('目標期間不合法');
  const goal:any={};
  for(const k of ['occupancy','performance','referrals']){
@@ -14,6 +14,12 @@ export async function saveGoal(branchId:string,period:string,values:any){
  await runTransaction(db,async t=>{
   const [actor,old]=await Promise.all([t.get(doc(db,'users',uid)),t.get(ref)]);
   if(!['admin','supervisor'].includes(actor.data()?.role))throw new Error('只有主管或管理員能設定目標');
+  if(preserveEmpty) {
+    for(const k of ["occupancy","performance","referrals"]) {
+      if(values[k] === "" || values[k] == null)
+        goal[k] = old.data()?.[k] ?? null;
+    }
+  }
   const next={...goal,period,revision:(old.data()?.revision||0)+1,updatedBy:uid,updatedAt:serverTimestamp(),changeId:audit.id};
   t.set(ref,next);t.set(audit,{period,previous:old.data()||null,next,by:uid,createdAt:serverTimestamp()});
  });
