@@ -27,7 +27,7 @@ jobs:
           node-version: '22'
 
       - name: Apply dashboard features
-        run: python3 scripts/update-monthly-entry.py
+        run: python3 scripts/update-partial-kpi.py
 
       - name: Install dependencies
         run: |
