@@ -40,8 +40,9 @@ export function annualProgress(year, today, months, referrals, goal, branch) {
   const currentYear=y===nowY;
   const total=currentYear?branch.total:latest?.total;
   const rented=currentYear?branch.rented:latest?.rented;
-  const occupancy=currentYear?(total>0?rented/total*100:null):latest?.kpiMetrics?.occupancy??(total>0?rented/total*100:null);
+  const corrected=months.find(m=>(m.id||m.month)===today.slice(0,7)&&m.manualOccupancy);
+  const occupancy=currentYear&&corrected?corrected.kpiMetrics.occupancy:currentYear?(total>0?rented/total*100:null):latest?.kpiMetrics?.occupancy??(total>0?rented/total*100:null);
   const final=months.find(m=>(m.id||m.month)===year+'-12'&&m.source==='import');
   const finalOccupancy=final?.kpiMetrics?.occupancy??(final?.total>0?final.rented/final.total*100:null);
-  return {completed,remaining,average,required,missing:metrics.filter(v=>v==null).length,referred,referralsRequired:goal?.referrals!=null&&remaining>0?Math.max(0,(goal.referrals-referred)/remaining):null,occupancy,total,rented,unitsNeeded:goal?.occupancy!=null&&total>0?Math.max(0,Math.ceil(total*goal.occupancy/100-1e-9)-rented):null,finalOccupancy};
+  return {completed,remaining,average,required,missing:metrics.filter(v=>v==null).length,referred,referralsRequired:goal?.referrals!=null&&remaining>0?Math.max(0,(goal.referrals-referred)/remaining):null,occupancy,total,rented,unitsNeeded:goal?.occupancy!=null&&total>0?Math.max(0,(currentYear&&corrected?Math.ceil(total*Math.max(0,goal.occupancy-occupancy)/100-1e-9):Math.ceil(total*goal.occupancy/100-1e-9)-rented)):null,finalOccupancy};
 }

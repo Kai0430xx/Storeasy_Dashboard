@@ -1,3 +1,4 @@
+import { effectiveMonths } from "./actuals.js";
 import GoalsOverview from "./GoalsOverview";
 import {useEffect,useState} from 'react';
 import {collection,onSnapshot} from 'firebase/firestore';
@@ -13,7 +14,7 @@ export default function Targets({branches,month,profile,data}:{branches:Row[];mo
  const [entries,setEntries]=useState<Row[]>([]),[history,setHistory]=useState<Row|null>(null);
  useEffect(()=>{setEditing(null);setHistory(null);setError('');setNotice('');},[month]);
  const today=taipeiDate(),year=month.slice(0,4),global=['admin','supervisor'].includes(profile.role),edit=global||profile.role==='manager';
- useEffect(()=>{setRecords({});const stops=branches.flatMap(b=>['targets','referrals','targetHistory'].map(c=>onSnapshot(collection(db,'branches',b.id,c),s=>setRecords(prev=>({...prev,[b.id]:{...prev[b.id],[c]:s.docs.map(d=>({id:d.id,...d.data()}))}})),e=>setError(e.message))));return()=>stops.forEach(s=>s());},[branches.map(b=>b.id).join(',')]);
+ useEffect(()=>{setRecords({});const stops=branches.flatMap(b=>['targets','referrals','targetHistory','actuals'].map(c=>onSnapshot(collection(db,'branches',b.id,c),s=>setRecords(prev=>({...prev,[b.id]:{...prev[b.id],[c]:s.docs.map(d=>({id:d.id,...d.data()}))}})),e=>setError(e.message))));return()=>stops.forEach(s=>s());},[branches.map(b=>b.id).join(',')]);
  async function run(fn:()=>Promise<unknown>){setBusy(true);setError('');try{await fn();setEditing(null);setNotice('已儲存');}catch(e){setError(e instanceof Error?e.message:String(e));}finally{setBusy(false);}}
  return <>
   <header className="page-header"><div><p>依上方選取月份查看月度目標及該年度進度。目標修改會保留紀錄。</p></div></header>
@@ -32,12 +33,12 @@ export default function Targets({branches,month,profile,data}:{branches:Row[];mo
   {branches.map(b=>{
    const r=records[b.id]||{},goals=r.targets||[],refs=r.referrals||[];
    const monthly=goals.find((g:Row)=>g.id===month),annual=goals.find((g:Row)=>g.id===year),ref=refs.find((v:Row)=>v.id===month);
-   const months=data[b.id]?.months||[],kpi=months.find((m:Row)=>(m.id||m.month)===month&&m.source==='import'),metrics=kpi?.kpiMetrics||{};
+   const months=effectiveMonths(data[b.id]?.months||[],r.actuals||[]),kpi=months.find((m:Row)=>(m.id||m.month)===month&&m.source==='import'),metrics=kpi?.kpiMetrics||{};
    const occupancy=metrics.occupancy??(kpi?.total>0?kpi.rented/kpi.total*100:null);
    const progress=annualProgress(year,today,months,refs,annual,b);
    return <section className="panel target-panel" key={b.id}>
     <div className="panel-heading"><h2>{b.name}</h2><button className="text-button" onClick={()=>setHistory({branch:b,items:r.targetHistory||[]})}>目標修改紀錄</button></div>
-    <h3>{month} 每月目標</h3>
+    <h3>{month} 每月目標</h3>{kpi?.manualActuals&&<p>此月包含手動修正值；原 KPI 保留，可在上方「輸入／修正本月數值」查看及恢復。</p>}
     {global&&<button onClick={()=>setEditing({kind:'goal',branch:b,period:month,values:monthly||{}})}>設定每月目標</button>}
     <div className="table-wrap"><table><thead><tr><th>指標</th><th>目標</th><th>實際</th><th>結果</th></tr></thead><tbody>
      {(monthly?.occupancy!=null)&&<tr><td>出租率</td><td>{monthly?.occupancy==null?'未設定':percent(monthly.occupancy)}</td><td>{percent(occupancy)}</td><td>{result(occupancy,monthly?.occupancy)}</td></tr>}

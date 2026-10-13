@@ -1,3 +1,4 @@
+import { effectiveMonths } from "./actuals.js";
 import {collection,doc,getDoc,getDocs} from 'firebase/firestore';
 import {auth,db} from './firebase';
 import {compareBranches} from './branch-order.js';
@@ -8,12 +9,12 @@ export function annualExportRows(branches:Row[],records:Row,year:string,today:st
  const output:Row[]=[];
  const check=(target:any,actual:any,future:boolean,missing:string)=>target==null?'未設定':future?'尚未到月份':actual==null?missing:actual>=target?'達標':'未達標';
  for(const b of [...branches].sort(compareBranches))for(let i=1;i<=12;i++){
-  const month=`${year}-${String(i).padStart(2,'0')}`,r=records[b.id]||{},goal=r.targets?.find((v:Row)=>v.id===month),kpi=r.months?.find((v:Row)=>(v.id||v.month)===month&&v.source==='import'),ref=r.referrals?.find((v:Row)=>(v.id||v.month)===month),future=month>today.slice(0,7);
+  const month=`${year}-${String(i).padStart(2,'0')}`,r=records[b.id]||{},goal=r.targets?.find((v:Row)=>v.id===month),kpi=effectiveMonths(r.months||[],r.actuals||[]).find((v:Row)=>(v.id||v.month)===month&&v.source==='import'),ref=r.referrals?.find((v:Row)=>(v.id||v.month)===month),future=month>today.slice(0,7);
   const occupancy=kpi?.kpiMetrics?.occupancy??(kpi?.total>0&&typeof kpi.rented==='number'?kpi.rented/kpi.total*100:null),performance=kpi?.kpiMetrics?.performance??null;
   const statuses=[check(goal?.occupancy,occupancy,future,'待匯入 KPI'),check(goal?.performance,performance,future,'待匯入 KPI'),check(goal?.referrals,ref?.count,future,'轉介未填')];
   const required=statuses.filter(s=>s!=='未設定');
   const overall=!required.length?'未設定':future?'尚未到月份':required.some(s=>s==='待匯入 KPI'||s==='轉介未填')?'資料未齊':required.every(s=>s==='達標')?'達標':'未達標';
-  output.push({branchId:b.id,name:b.name,month,occupancyTarget:goal?.occupancy??null,occupancy,occupancyResult:statuses[0],performanceTarget:goal?.performance??null,performance,performanceResult:statuses[1],referralTarget:goal?.referrals??null,referrals:ref?.count??null,referralResult:statuses[2],overall,bonus:ref?.count>3?'超過 3 筆・年終加成':'',kpiFile:kpi?.sourceFile||'未匯入'});
+  output.push({branchId:b.id,name:b.name,month,occupancyTarget:goal?.occupancy??null,occupancy,occupancyResult:statuses[0],performanceTarget:goal?.performance??null,performance,performanceResult:statuses[1],referralTarget:goal?.referrals??null,referrals:ref?.count??null,referralResult:statuses[2],overall,bonus:ref?.count>3?'超過 3 筆・年終加成':'',kpiFile:(kpi?.sourceFile||'未匯入')+(kpi?.manualActuals?'（手動修正：'+(r.actuals?.find((a:Row)=>(a.id||a.month)===month)?.reason||'')+'）':'')});
  }
  return output;
 }
@@ -43,6 +44,6 @@ export async function exportAnnualTargets(year:string){
  if(['admin','supervisor'].includes(actor.role)){const snapshot=await getDocs(collection(db,'branches'));branches=snapshot.docs.map(d=>({id:d.id,...d.data()}));}
  else {const snapshots=await Promise.all([...new Set<string>(actor.branchIds||[])].map(id=>getDoc(doc(db,'branches',id))));branches=snapshots.filter(s=>s.exists()).map(s=>({id:s.id,...s.data()}));}
  branches=branches.filter(b=>!b.archived);if(!branches.length)throw new Error('沒有可匯出的據點');
- const records:Row={};for(const b of branches){records[b.id]={};for(const c of ['targets','months','referrals']){const snapshot=await getDocs(collection(db,'branches',b.id,c));records[b.id][c]=snapshot.docs.map(d=>({id:d.id,...d.data()}));}}
+ const records:Row={};for(const b of branches){records[b.id]={};for(const c of ['targets','months','referrals','actuals']){const snapshot=await getDocs(collection(db,'branches',b.id,c));records[b.id][c]=snapshot.docs.map(d=>({id:d.id,...d.data()}));}}
  const book=await createAnnualWorkbook(branches,records,year,taipeiDate());const buffer=await book.xlsx.writeBuffer();const blob=new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=`收多易_${year}_全據點月目標與轉介.xlsx`;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);
 }
