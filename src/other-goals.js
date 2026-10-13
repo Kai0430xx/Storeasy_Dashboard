@@ -15,9 +15,16 @@ export function normalizeOtherActuals(goals = {}, values = {}) {
     return [key,{goalId:g.id,value}];
   }));
 }
+export function sameOtherGoals(a = {}, b = {}) {
+  const canonical = value => Object.entries(normalizeOtherGoals(value))
+    .sort(([x],[y])=>x.localeCompare(y));
+  return JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
+}
 export function otherProgress(goals = {}, actuals = {}, future = false) {
   return Object.entries(goals).map(([key,g])=>{
     const saved=actuals[key], actual=saved?.goalId===g.id && typeof saved.value==='number'?saved.value:null;
     return {key,...g,actual,result:future?'尚未到月份':actual==null?'待填寫':actual>=g.target?'達標':'未達標'};
   });
 }
+
+// storeasy-opening-month-v1

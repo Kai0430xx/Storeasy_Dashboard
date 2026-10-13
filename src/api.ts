@@ -192,6 +192,8 @@ export async function execute(
         throw new Error("請填寫據點名稱");
       }
 
+      const openingMonth=String(data.openingMonth||"");
+      if ("openingMonth" in data && openingMonth && !/^20\d{2}-(0[1-9]|1[0-2])$/.test(openingMonth)) throw new Error("開幕月份不合法");
       await runTransaction(db, async (transaction) => {
         const old = await transaction.get(ref);
 
@@ -203,6 +205,7 @@ export async function execute(
           ref,
           {
             name: String(data.name).trim(),
+            ...("openingMonth" in data ? {openingMonth:openingMonth||null} : {}),
             ...(!old.exists()
               ? {
                   total: 0,
@@ -1236,3 +1239,5 @@ export async function execute(
       throw new Error("未知操作");
   }
 }
+
+// storeasy-opening-month-v1

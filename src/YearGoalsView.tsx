@@ -27,6 +27,7 @@ export default function YearGoalsView({branches,records,data,year}:{branches:Row
  const ready=branch&&['targets','referrals','actuals'].every(k=>Array.isArray(record?.[k]))&&Array.isArray(data[branch.id]?.months);
  const rows=ready?annualExportRows([branch],{[branch.id]:{...record,months:data[branch.id].months}},year,taipeiDate()):[];
  function items(r:Row){
+  if(r.notOpen)return [{name:'尚未開幕，不納入年度計算',actual:'—',result:'未開幕'}];
   const list:Row[]=[];
   if(r.occupancyTarget!=null)list.push({name:`出租率：${percent(r.occupancyTarget)}`,actual:percent(r.occupancy),result:r.occupancyResult});
   if(r.performanceTarget!=null)list.push({name:`業績完成率：${percent(r.performanceTarget)}`,actual:percent(r.performance),result:r.performanceResult});
@@ -49,3 +50,5 @@ export default function YearGoalsView({branches,records,data,year}:{branches:Row
 }
 
 // storeasy-month-result-v1
+
+// storeasy-opening-month-v1

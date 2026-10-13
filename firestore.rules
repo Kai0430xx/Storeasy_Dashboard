@@ -182,7 +182,12 @@ service cloud.firestore {
     }
 
     match /branches/{id} {
-      function balanced() {
+      function validOpening() {
+    let d=request.resource.data;
+    return !('openingMonth' in d) || d.openingMonth == null
+     || (d.openingMonth is string && d.openingMonth.matches('20[0-9]{2}-(0[1-9]|1[0-2])'));
+   }
+   function balanced() {
         let d = request.resource.data;
 
         return d.name is string
@@ -202,12 +207,12 @@ service cloud.firestore {
       allow read: if branchAccess(id);
 
       allow create: if globalAccess()
-        && balanced()
+        && balanced() && validOpening()
         && request.resource.data.total == 0
         && request.resource.data.revision == 0;
 
-      allow update: if branchEdit(id)
-        && balanced()
+      allow update: if branchEdit(id) && (globalAccess() || !request.resource.data.diff(resource.data).affectedKeys().hasAny(['openingMonth']))
+        && balanced() && validOpening()
         && request.resource.data.revision >= resource.data.revision
         && (
           !('importing' in resource.data)
@@ -594,3 +599,5 @@ service cloud.firestore {
 }
 
 // storeasy-other-monthly-v1
+
+// storeasy-opening-month-v1

@@ -1,4 +1,4 @@
-import {normalizeOtherActuals} from './other-goals.js';
+import {normalizeOtherActuals,sameOtherGoals} from './other-goals.js';
 import {useEffect,useState} from 'react';
 import {collection,doc,getDoc,runTransaction,serverTimestamp} from 'firebase/firestore';
 import {auth,db} from './firebase';
@@ -17,7 +17,7 @@ export default function MonthlyEntry({branch,month}:{branch:Row;month:string}){
   if(entries.length>200)throw Error('轉介最多 200 筆');const clean=entries.map(v=>{const code=String(v.code||'').trim(),lease=parseLease(v.leasePeriod);if(!code||code.length>80||code.includes('/')||!lease.leasePeriod)throw Error('每筆轉介請填倉位編號與合法租期');return {code,...lease};});if(new Set(clean.map(v=>v.code+'|'+v.leasePeriod)).size!==clean.length)throw Error('轉介明細重複');
   const ref=doc(db,'branches',branch.id,'actuals',month),audit=doc(collection(db,'branches',branch.id,'actualHistory'));
   await runTransaction(db,async t=>{const [old,goal,actor]=await Promise.all([t.get(ref),t.get(doc(db,'branches',branch.id,'targets',month)),t.get(doc(db,'users',uid))]);const p=actor.data();if(!p||!(['admin','supervisor'].includes(p.role)||(p.role==='manager'&&p.branchIds?.includes(branch.id))))throw Error('沒有修改此據點的權限');
-   if(JSON.stringify(goal.data()?.other||{})!==JSON.stringify(otherGoals))throw Error('其它目標已被修改，請關閉視窗後重新開啟');
+   if(!sameOtherGoals(goal.data()?.other||{},otherGoals))throw Error('其它目標已被修改，請關閉視窗後重新開啟');
    const other=normalizeOtherActuals(otherGoals,otherValues);
    const next={month,...actual,other,reason,revision:(old.data()?.revision||0)+1,changeId:audit.id,updatedBy:uid,updatedAt:serverTimestamp()};
    t.set(ref,next);t.set(audit,{month,previous:old.data()||null,next,by:uid,createdAt:serverTimestamp()});
@@ -29,3 +29,5 @@ export default function MonthlyEntry({branch,month}:{branch:Row;month:string}){
 }
 
 // storeasy-other-monthly-v1
+
+// storeasy-opening-month-v1

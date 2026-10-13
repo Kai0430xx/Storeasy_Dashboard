@@ -940,7 +940,7 @@ function App() {
                                       })
                                     }
                                   >
-                                    修改名稱
+                                    據點設定
                                   </button>
                                 </td>
                               )}
@@ -1734,7 +1734,7 @@ function App() {
                   submit(event, (form) =>
                     call("saveBranch", {
                       id: modal.id,
-                      name: form.name,
+                      name: form.name, openingMonth: form.openingMonth,
                     }),
                   )
                 }
@@ -1748,6 +1748,7 @@ function App() {
                     defaultValue={modal.name}
                   />
                 </label>
+                {global&&<label>開幕月份（年度計算起點）<input name="openingMonth" type="month" min="2000-01" max="2099-12" defaultValue={modal.openingMonth||''}/><small>未設定從 1 月計算；開幕當年度從此月份起，之後年度從 1 月起。</small></label>}
                 <Submit busy={busy} />
               </form>
             )}
@@ -2686,3 +2687,5 @@ function ImportForm({
 createRoot(
   document.getElementById("root")!,
 ).render(<App />);
+
+// storeasy-opening-month-v1
