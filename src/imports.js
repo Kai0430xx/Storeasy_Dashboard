@@ -209,8 +209,8 @@ export function parseKpi(book) {
 
   for (const name of book.SheetNames) {
     const rows = book.Sheets[name];
-    const year = String(rows[0]?.[1] || name)
-      .match(/20\d{2}/)?.[0];
+    const year = String(rows[0]?.[1] ?? "").match(/20\d{2}/)?.[0]
+      || String(name).match(/20\d{2}/)?.[0];
 
     if (!year) continue;
 
