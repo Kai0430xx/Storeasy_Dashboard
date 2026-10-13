@@ -27,7 +27,7 @@ jobs:
           node-version: '22'
 
       - name: Apply dashboard features
-        run: python3 scripts/update-targets.py
+        run: python3 scripts/update-goals-overview.py
 
       - name: Install dependencies
         run: |
