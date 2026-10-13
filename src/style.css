@@ -466,3 +466,52 @@ button.flow-row:hover { background:#f4f7fb; }
 
 /* storeasy-achieved-red-v1 */
 .goal-achieved { color: #b91c1c; font-weight: 700; }
+
+/* storeasy-year-goals-view-v1 */
+
+.modal.year-goals-modal {
+  width: min(1100px, calc(100vw - 32px));
+  height: min(900px, 94dvh);
+  max-height: 94dvh;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+}
+.year-goals-modal > .panel-heading,
+.year-goals-modal > label,
+.year-goals-modal > p {
+  flex-shrink: 0;
+  margin: 0;
+}
+.year-goals-table {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+.year-goals-table table {
+  min-width: 650px;
+  width: 100%;
+}
+.year-goals-table thead th {
+  position: sticky;
+  top: 0;
+  background: #f5f7fa;
+  z-index: 1;
+}
+.year-goals-table th[scope="rowgroup"] {
+  vertical-align: top;
+}
+.year-goals-table td {
+  white-space: normal;
+}
+.year-goals-modal .goal-achieved {
+  color: #b91c1c;
+  font-weight: 700;
+}
+@media (max-width: 600px) {
+  .modal.year-goals-modal {
+    padding: 14px;
+    width: calc(100vw - 24px);
+  }
+}

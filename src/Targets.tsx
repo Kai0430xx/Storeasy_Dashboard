@@ -49,7 +49,7 @@ export default function Targets({branches,month,profile,data}:{branches:Row[];mo
             setError(e instanceof Error?e.message:String(e));
           }
         }}>目標修改紀錄</button></div>
-    <h3>{month} 每月目標</h3>{kpi?.manualActuals&&<p>此月包含手動修正值；原 KPI 保留，可在上方「輸入／修正本月數值」查看及恢復。</p>}
+    <h3>{month} 每月目標</h3>{kpi?.manualActuals&&<p>此月包含手動修正值；原 KPI 保留，可在上方「設定實際數值」查看及恢復。</p>}
     {global&&<button onClick={()=>setEditing({kind:'goal',branch:b,period:month,values:monthly||{}})}>設定每月目標</button>}
     <div className="table-wrap"><table><thead><tr><th>指標</th><th>目標</th><th>實際</th><th>結果</th></tr></thead><tbody>
      {(monthly?.occupancy!=null)&&<tr><td>出租率</td><td>{monthly?.occupancy==null?'未設定':percent(monthly.occupancy)}</td><td>{percent(occupancy)}</td><td>{result(occupancy,monthly?.occupancy)}</td></tr>}
