@@ -1,3 +1,4 @@
+import { compareBranches } from "./branch-order.js";
 import GoalsOverview from "./GoalsOverview";
 import Targets, { VacancyCell, OperationsInsights, exitCategories } from "./Targets";
 import { getDoc } from "firebase/firestore";
@@ -125,13 +126,7 @@ function App() {
   const [status, setStatus] = useState("all");
   const [mobile, setMobile] = useState(false);
 
-  const branches = [...branchRows].sort((a, b) =>
-  String(a.name || "").localeCompare(
-    String(b.name || ""),
-    "zh-Hant-u-co-stroke",
-    { numeric: true }
-  )
-);
+  const branches = [...branchRows].sort(compareBranches);
   const global =
     profile && ["admin", "supervisor"].includes(profile.role);
   const canWrite =

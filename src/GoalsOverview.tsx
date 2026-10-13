@@ -1,3 +1,4 @@
+import { compareBranches } from "./branch-order.js";
 import {useEffect,useState} from 'react';
 import {collection,getDocs,onSnapshot} from 'firebase/firestore';
 import {db} from './firebase';
@@ -20,7 +21,7 @@ export default function GoalsOverview({branches,records:supplied,data,month,glob
  const mo=has(month,'occupancy'),mp=has(month,'performance'),mr=has(month,'referrals')||branches.some(b=>monthlyRef(b)?.count>0);
  const ao=has(year,'occupancy'),ap=has(year,'performance'),ar=has(year,'referrals')||branches.some(b=>referrals(b).some((r:Row)=>r.month?.startsWith(year+'-')&&r.month<=today.slice(0,7)&&r.count>0));
  async function loadDraft(list:Row[],p:string){const rows=await Promise.all(list.map(async b=>{const s=await getDocs(collection(db,'branches',b.id,'targets'));const g=s.docs.find(d=>d.id===p)?.data();return [b.id,Object.fromEntries(keys.map(k=>[k,g?.[k]??'']))] as const;}));setDraft(Object.fromEntries(rows));}
- async function open(){setBusy(true);setMessage('');try{const s=await getDocs(collection(db,'branches'));const list=s.docs.map(d=>({id:d.id,...d.data()})).filter((b:Row)=>!b.archived);if(!list.length)throw Error('尚無據點');await loadDraft(list,month);setPeriod(month);setAll(list);}catch(e){setMessage(e instanceof Error?e.message:String(e));}finally{setBusy(false);}}
+ async function open(){setBusy(true);setMessage('');try{const s=await getDocs(collection(db,'branches'));const list=s.docs.map(d=>({id:d.id,...d.data()})).filter((b:Row)=>!b.archived).sort(compareBranches);if(!list.length)throw Error('尚無據點');await loadDraft(list,month);setPeriod(month);setAll(list);}catch(e){setMessage(e instanceof Error?e.message:String(e));}finally{setBusy(false);}}
  async function changePeriod(p:string){if(!all)return;setBusy(true);setMessage('');try{await loadDraft(all,p);setPeriod(p);}catch(e){setMessage(String(e));}finally{setBusy(false);}}
  async function apply(e:React.FormEvent<HTMLFormElement>){e.preventDefault();if(!all)return;setBusy(true);let completed=0;const failed:string[]=[];for(const b of all){try{await saveGoal(b.id,period,draft[b.id]);completed++;}catch(err){failed.push(`${b.name}：${err instanceof Error?err.message:String(err)}`);}setMessage(`已處理 ${completed+failed.length}/${all.length} 間`);}setBusy(false);setMessage(`成功 ${completed} 間${failed.length?`；失敗 ${failed.length} 間：${failed.join('；')}`:''}`);if(!failed.length)setAll(null);}
  return <section className="panel target-panel">
