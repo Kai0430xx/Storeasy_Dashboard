@@ -27,7 +27,7 @@ jobs:
           node-version: '22'
 
       - name: Apply dashboard features
-        run: python3 scripts/update-year-goals-view.py
+        run: python3 scripts/update-kpi-sheet-year.py
 
       - name: Install dependencies
         run: |
