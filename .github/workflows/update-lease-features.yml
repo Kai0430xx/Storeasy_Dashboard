@@ -27,7 +27,7 @@ jobs:
           node-version: '22'
 
       - name: Apply dashboard features
-        run: python3 scripts/update-opening-month.py
+        run: python3 scripts/update-referral-red.py
 
       - name: Install dependencies
         run: |
