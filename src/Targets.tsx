@@ -40,18 +40,18 @@ export default function Targets({branches,month,profile,data}:{branches:Row[];mo
     <h3>{month} 每月目標</h3>
     {global&&<button onClick={()=>setEditing({kind:'goal',branch:b,period:month,values:monthly||{}})}>設定每月目標</button>}
     <div className="table-wrap"><table><thead><tr><th>指標</th><th>目標</th><th>實際</th><th>結果</th></tr></thead><tbody>
-     <tr><td>出租率</td><td>{monthly?.occupancy==null?'未設定':percent(monthly.occupancy)}</td><td>{percent(occupancy)}</td><td>{result(occupancy,monthly?.occupancy)}</td></tr>
-     <tr><td>業績完成率</td><td>{monthly?.performance==null?'未設定':percent(monthly.performance)}</td><td>{percent(metrics.performance)}</td><td>{result(metrics.performance,monthly?.performance)}</td></tr>
-     <tr><td>轉介數量</td><td>{monthly?.referrals??'未設定'}</td><td>{ref?.count??'未填寫'} {ref?.count>3&&<span className="badge yellow">超過 3 間・年終加成</span>}</td><td>{result(ref?.count,monthly?.referrals)}{monthly?.referrals!=null&&!ref&&'・必填'}</td></tr>
+     {(monthly?.occupancy!=null)&&<tr><td>出租率</td><td>{monthly?.occupancy==null?'未設定':percent(monthly.occupancy)}</td><td>{percent(occupancy)}</td><td>{result(occupancy,monthly?.occupancy)}</td></tr>}
+     {(monthly?.performance!=null)&&<tr><td>業績完成率</td><td>{monthly?.performance==null?'未設定':percent(monthly.performance)}</td><td>{percent(metrics.performance)}</td><td>{result(metrics.performance,monthly?.performance)}</td></tr>}
+     {(monthly?.referrals!=null||ref?.count>0)&&<tr><td>轉介數量</td><td>{monthly?.referrals??'未設定'}</td><td>{ref?.count??'未填寫'} {ref?.count>3&&<span className="referral-bonus">超過 3 筆・年終加成</span>}</td><td>{result(ref?.count,monthly?.referrals)}{monthly?.referrals!=null&&!ref&&'・必填'}</td></tr>}
     </tbody></table></div>
     <p className="hint">KPI 來源：{kpi?.sourceFile||'待匯入'}。{metrics.revenue!=null&&`當年當月業績：NT$ ${Number(metrics.revenue).toLocaleString()}`} 舊 KPI 若未含完成率，請重新匯入原檔。</p>
     <h3>{year} 年度目標</h3>
     {global&&<button onClick={()=>setEditing({kind:'goal',branch:b,period:year,values:annual||{}})}>設定年度目標</button>}
     <p>已結束 {progress.completed} 個月，剩餘 {progress.remaining} 個月。{progress.missing>0&&`有 ${progress.missing} 個已結束月份缺少業績完成率 KPI，補齊前不推算年度需求。`}</p>
     <div className="table-wrap"><table><thead><tr><th>指標</th><th>年度目標</th><th>目前進度</th><th>尚需完成</th></tr></thead><tbody>
-     <tr><td>業績完成率（全年平均）</td><td>{annual?.performance==null?'未設定':percent(annual.performance)}</td><td>{progress.average==null?'待完整 KPI':percent(progress.average)}{progress.completed===12&&`・${result(progress.average,annual?.performance)}`}</td><td>{annual?.performance==null?'未設定':progress.remaining===0?'年度已結束':progress.required==null?'待完整 KPI':`剩餘月份平均需 ${percent(progress.required)}`}</td></tr>
-     <tr><td>出租率（12 月達標）</td><td>{annual?.occupancy==null?'未設定':percent(annual.occupancy)}</td><td>{percent(progress.occupancy)}{progress.finalOccupancy!=null&&`・12 月 ${result(progress.finalOccupancy,annual?.occupancy)}`}</td><td>{annual?.occupancy==null?'未設定':progress.occupancy==null?'待資料':`差 ${Math.max(0,annual.occupancy-progress.occupancy).toFixed(2)} 個百分點${progress.unitsNeeded==null?'':`，需再出租 ${progress.unitsNeeded} 間`}`}</td></tr>
-     <tr><td>轉介數量（全年加總）</td><td>{annual?.referrals??'未設定'}</td><td>本年度已填合計 {progress.referred} 間</td><td>{annual?.referrals==null?'未設定':`差 ${Math.max(0,annual.referrals-progress.referred)} 間${progress.referralsRequired==null?'':`，剩餘每月平均 ${progress.referralsRequired.toFixed(2)} 間`}`}</td></tr>
+     {(annual?.performance!=null)&&<tr><td>業績完成率（全年平均）</td><td>{annual?.performance==null?'未設定':percent(annual.performance)}</td><td>{progress.average==null?'待完整 KPI':percent(progress.average)}{progress.completed===12&&`・${result(progress.average,annual?.performance)}`}</td><td>{annual?.performance==null?'未設定':progress.remaining===0?'年度已結束':progress.required==null?'待完整 KPI':`剩餘月份平均需 ${percent(progress.required)}`}</td></tr>}
+     {(annual?.occupancy!=null)&&<tr><td>出租率（12 月達標）</td><td>{annual?.occupancy==null?'未設定':percent(annual.occupancy)}</td><td>{percent(progress.occupancy)}{progress.finalOccupancy!=null&&`・12 月 ${result(progress.finalOccupancy,annual?.occupancy)}`}</td><td>{annual?.occupancy==null?'未設定':progress.occupancy==null?'待資料':`差 ${Math.max(0,annual.occupancy-progress.occupancy).toFixed(2)} 個百分點${progress.unitsNeeded==null?'':`，需再出租 ${progress.unitsNeeded} 間`}`}</td></tr>}
+     {(annual?.referrals!=null||progress.referred>0)&&<tr><td>轉介數量（全年加總）</td><td>{annual?.referrals??'未設定'}</td><td>本年度已填合計 {progress.referred} 間</td><td>{annual?.referrals==null?'未設定':`差 ${Math.max(0,annual.referrals-progress.referred)} 間${progress.referralsRequired==null?'':`，剩餘每月平均 ${progress.referralsRequired.toFixed(2)} 間`}`}</td></tr>}
     </tbody></table></div>
     <p className="hint">年度業績採每月完成率平均。出租率以倉位數計算；本年度差距使用目前倉位現況，12 月結果使用匯入 KPI。倉位數變動時所需間數會隨之調整。</p>
     <h3>本月轉介明細 {monthly?.referrals!=null?'（必填）':'（選填）'}</h3>

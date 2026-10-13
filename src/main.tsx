@@ -1,3 +1,4 @@
+import GoalsOverview from "./GoalsOverview";
 import Targets, { VacancyCell, OperationsInsights, exitCategories } from "./Targets";
 import { getDoc } from "firebase/firestore";
 import RentalDetails from "./RentalDetails";
@@ -1004,12 +1005,10 @@ function App() {
               )}
 
               {page === "dashboard" && <>
-                <section className="panel target-panel">
-                  <h2>營運目標與轉介</h2>
-                  <button className="primary" onClick={()=>setPage("targets")}>
-                    查看每月／年度目標與轉介
-                  </button>
-                </section>
+                <GoalsOverview
+                  branches={visible} data={data} month={month}
+                  global={Boolean(global)}
+                />
                 <OperationsInsights units={units} events={events} />
               </>}
               {page === "targets" && <Targets
