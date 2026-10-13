@@ -366,3 +366,92 @@ button.flow-row:hover { background:#f4f7fb; }
   color: #b91c1c;
   font-weight: 700;
 }
+
+/* 放大逐店目標設定視窗 */
+.modal[aria-label="逐店設定全部據點目標"] {
+  position: relative;
+  width: min(1100px, calc(100vw - 40px));
+  max-width: 100%;
+  height: min(940px, 94dvh);
+  max-height: 94dvh;
+  padding: 22px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.modal[aria-label="逐店設定全部據點目標"] > button:first-child {
+  position: absolute;
+  right: 14px;
+  top: 14px;
+}
+
+.modal[aria-label="逐店設定全部據點目標"] > h2 {
+  margin: 0;
+  padding-right: 34px;
+}
+
+.modal[aria-label="逐店設定全部據點目標"] > p {
+  margin: 0;
+}
+
+.modal[aria-label="逐店設定全部據點目標"] > form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: 12px;
+}
+
+.modal[aria-label="逐店設定全部據點目標"] form > label {
+  margin: 0;
+}
+
+.modal[aria-label="逐店設定全部據點目標"] form > fieldset {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  overflow: hidden;
+}
+
+.modal[aria-label="逐店設定全部據點目標"] fieldset > .table-wrap {
+  height: 100%;
+  overflow: auto;
+}
+
+.modal[aria-label="逐店設定全部據點目標"] th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f7f9fc;
+}
+
+.modal[aria-label="逐店設定全部據點目標"] th,
+.modal[aria-label="逐店設定全部據點目標"] td {
+  padding: 8px 12px;
+}
+
+.modal[aria-label="逐店設定全部據點目標"] input {
+  min-width: 100px;
+}
+
+.modal[aria-label="逐店設定全部據點目標"] form > .primary {
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin: 0;
+}
+
+.modal[aria-label="逐店設定全部據點目標"] form > [role="status"] {
+  flex-shrink: 0;
+  margin: 0;
+}
+
+@media (max-width: 600px) {
+  .modal[aria-label="逐店設定全部據點目標"] {
+    padding: 14px;
+  }
+}
