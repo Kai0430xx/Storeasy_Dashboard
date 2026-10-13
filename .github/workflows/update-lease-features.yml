@@ -27,7 +27,7 @@ jobs:
           node-version: '22'
 
       - name: Apply dashboard features
-        run: python3 scripts/update-referral-red.py
+        run: python3 scripts/update-annual-renewal.py
 
       - name: Install dependencies
         run: |
