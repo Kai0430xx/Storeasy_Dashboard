@@ -89,7 +89,7 @@ export default function RentalDetails({
                     ? row.previousLease?.leasePeriod
                     : row.details.leasePeriod) || "未記錄"}
                 </td>
-                {type === "exit" && <td className="exit-reason">{row.exitReason || "未記錄"}</td>}<td>{row.details.note || "—"}</td>
+                {type === "exit" && <td className="exit-reason">{`${row.exitCategory || "未分類"}：${row.exitReason || "未記錄"}`}</td>}<td>{row.details.note || "—"}</td>
                 <td>
                   {row.historical ? "異動時" : "現況／舊紀錄"}
                 </td>

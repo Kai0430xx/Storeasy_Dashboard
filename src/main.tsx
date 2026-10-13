@@ -1,3 +1,4 @@
+import Targets, { VacancyCell, OperationsInsights, exitCategories } from "./Targets";
 import { getDoc } from "firebase/firestore";
 import RentalDetails from "./RentalDetails";
 import { leaseStatus } from "./lease.js";
@@ -464,6 +465,7 @@ function App() {
     ["units", "倉位管理", Warehouse],
     ["activities", "活動優惠", Tags],
     ["imports", "資料匯入", Upload],
+    ["targets", "目標與轉介", LayoutDashboard],
     ...(global ? [["users", "帳號與權限", Users]] : []),
   ];
 
@@ -626,7 +628,7 @@ function App() {
                           ? "各據點專屬優惠，使用成效一次掌握。"
                           : page === "imports"
                             ? "從 Excel 匯入倉位現況與歷史月度統計。"
-                            : "管理註冊申請、角色與據點存取權限。"}
+                            : page === "targets" ? "追蹤目標達成、年度差距及各月轉介紀錄。" : "管理註冊申請、角色與據點存取權限。"}
                   </p>
                 </div>
 
@@ -1001,6 +1003,21 @@ function App() {
                 </>
               )}
 
+              {page === "dashboard" && <>
+                <section className="panel target-panel">
+                  <h2>營運目標與轉介</h2>
+                  <button className="primary" onClick={()=>setPage("targets")}>
+                    查看每月／年度目標與轉介
+                  </button>
+                </section>
+                <OperationsInsights units={units} events={events} />
+              </>}
+              {page === "targets" && <Targets
+                branches={branches.filter(b=>!b.archived && (branchId === "all" || b.id === branchId))}
+                month={month}
+                profile={profile}
+                data={data}
+              />}
               {page === "units" && (
                 <>
                   <div className="toolbar">
@@ -1057,7 +1074,7 @@ function App() {
                             <th>尺寸</th>
                             <th aria-sort={unitSort === "volume" ? "ascending" : "none"}><button className="text-button" aria-label="材積" onClick={() => setUnitSort("volume")}>材積{unitSort === "volume" ? " ↑" : ""}</button></th>
                             <th>月租</th>
-                            <th>狀態</th><th>租期</th>
+                            <th>狀態</th><th>租期</th><th>空倉起始日</th>
                             <th>備註</th>
                             {canWrite && <th>操作</th>}
                           </tr>
@@ -1095,7 +1112,7 @@ function App() {
                                 <td>
                                   <span className={`badge ${leaseStatus(unit, currentDate).color}`}>{leaseStatus(unit, currentDate).label}</span>
                                 </td>
-                                <td>{unit.leasePeriod || "—"}</td>
+                                <td>{unit.leasePeriod || "—"}</td><td><VacancyCell unit={unit} editable={Boolean(canWrite)} /></td>
                                 <td>{unit.note || "—"}</td>
 
                                 {canWrite && (
@@ -1208,7 +1225,7 @@ function App() {
                                     ?.map((activity: Row) => activity.name)
                                     .join("、") || "—"}
                                 </td>
-                                <td className="exit-reason">{event.type === "exit" ? event.exitReason || "未記錄" : "—"}</td>
+                                <td className="exit-reason">{event.type === "exit" ? `${event.exitCategory || "未分類"}：${event.exitReason || "未記錄"}` : "—"}</td>
                                 {canWrite && (
                                   <td>
                                     <button
@@ -1756,7 +1773,7 @@ function App() {
                       type: modal.type,
                       date: form.get("date"),
                       activityIds: form.getAll("activity"),
-                      exitReason: form.get("exitReason"),
+                      exitReason: form.get("exitReason"), exitCategory: form.get("exitCategory"),
                       leasePeriod: form.get("leasePeriod"),
                     }),
                     "倉位狀態與異動已更新",
@@ -1789,6 +1806,15 @@ function App() {
                   />
                 </label>
 
+                {modal.type === "exit" && (
+                  <label>
+                    退租原因分類
+                    <select aria-label="退租原因分類" name="exitCategory" required defaultValue="">
+                      <option value="" disabled>請選擇</option>
+                      {exitCategories.map(c=><option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </label>
+                )}
                 {modal.type === "exit" && (
                   <label>
                     退租原因

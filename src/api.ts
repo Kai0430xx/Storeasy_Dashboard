@@ -1,3 +1,4 @@
+import { exitCategories, vacancyDate } from "./targets.js";
 import { deleteUserAccount } from "./delete-user";
 import { removeActivity } from "./remove-activity";
 import { parseLease } from "./lease.js";
@@ -432,7 +433,11 @@ export async function execute(
           throw new Error("退租原因請填寫 1～500 字，不能只有空白");
         const lease = parseLease(type === "exit" ? "" : data.leasePeriod);
         if (type !== "exit" && !lease.leasePeriod) throw new Error("承租與續約必須填寫租期");
+        const exitCategory = type === "exit" ? String(data.exitCategory || "") : "";
+        if (type === "exit" && !exitCategories.includes(exitCategory))
+          throw new Error("請選擇退租原因分類");
         const previousLease = {
+          vacantSince: unit.vacantSince || null,
           leasePeriod: unit.leasePeriod || "",
           leaseStart: unit.leaseStart || null,
           leaseEnd: unit.leaseEnd || null,
@@ -452,6 +457,7 @@ export async function execute(
 
         transaction.update(unitDoc, {
           ...lease,
+          vacantSince: type === "exit" ? date : null,
           status:
             type === "exit"
               ? "vacant"
@@ -474,7 +480,7 @@ export async function execute(
           date,
           month: date.slice(0, 7),
           activities,
-          exitReason,
+          exitReason, exitCategory,
           priceSnapshot: priceSnapshot(unit, date),
           unitSnapshot: {
             dimensions: unit.dimensions,
@@ -639,6 +645,7 @@ export async function execute(
             leaseStart: null,
             leaseEnd: null,
           }),
+          vacantSince: event.type === "new" ? event.previousLease?.vacantSince || null : null,
           status: event.type === "new" ? "vacant" : "rented",
           lastEventId: event.previousEventId,
           lastEventDate: event.previousEventDate,
@@ -768,7 +775,7 @@ export async function execute(
               ),
               ...(!unitSnapshot.exists()
                 ? {
-                    status: "vacant",
+                    vacantSince: null, status: "vacant",
                     missing: false,
                     lastEventDate:
                       taipeiDate(),
@@ -915,6 +922,7 @@ export async function execute(
             data.effectiveDate,
             previousInventoryDate
           ),
+          vacantSince: vacancyDate(previousUnits.get(unit.code), vacant.has(unit.code) ? "vacant" : "rented", data.effectiveDate),
           status: vacant.has(unit.code)
             ? "vacant"
             : "rented",
@@ -1205,6 +1213,7 @@ export async function execute(
               new: month.new,
               renew: month.renew,
               exit: month.exit,
+              kpiMetrics: month.kpiMetrics || {revenue:null,performance:null,occupancy:null},
               amounts: frozenAmounts(
                 existingMonths.get(month.month),
                 month.amounts

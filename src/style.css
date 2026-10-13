@@ -357,3 +357,6 @@ button.flow-row:hover { background:#f4f7fb; }
   min-width: 160px;
   max-width: 320px;
 }
+
+.target-panel { margin-bottom:24px; padding:24px; }
+.target-panel h3 { margin-top:24px; }

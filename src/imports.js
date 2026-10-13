@@ -1,3 +1,4 @@
+import { kpiMetrics } from "./targets.js";
 import { parseLease } from "./lease.js";
 import { kpiAmounts } from "./pricing.js";
 import ExcelJS from "exceljs";
@@ -274,7 +275,7 @@ export function parseKpi(book) {
           `${year}-` +
           String(column).padStart(2, "0"),
 
-        amounts: kpiAmounts(rows, column),
+        amounts: kpiAmounts(rows, column), kpiMetrics: kpiMetrics(rows, column, year),
         total: totalValue,
         rented: rentedValue,
         new: num(fresh, column),
