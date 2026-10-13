@@ -1,3 +1,5 @@
+import LightInsights from "./LightInsights";
+import LazyUnits from "./LazyUnits";
 import { compareBranches } from "./branch-order.js";
 import GoalsOverview from "./GoalsOverview";
 import Targets, { VacancyCell, OperationsInsights, exitCategories } from "./Targets";
@@ -126,6 +128,7 @@ function App() {
   const [status, setStatus] = useState("all");
   const [mobile, setMobile] = useState(false);
 
+  const [loadAllUnits,setLoadAllUnits]=useState(false);
   const branches = [...branchRows].sort(compareBranches);
   const global =
     profile && ["admin", "supervisor"].includes(profile.role);
@@ -251,10 +254,10 @@ function App() {
           collection(db, "branches", branch.id, "activities"),
           where("month", "==", month),
         )],
-        ["months", collection(db, "branches", branch.id, "months")],
+        ["months", page === "imports" ? collection(db,"branches",branch.id,"months") : query(collection(db,"branches",branch.id,"months"),where(documentId(),">=",`${Number(month.slice(0,4))-1}-01`),where(documentId(),"<",`${Number(month.slice(0,4))+1}-01`))],
       ];
 
-      if (page === "units" || page === "imports" || page === "activities" || page === "dashboard") {
+      if ((page === "units" && (branchId !== "all" || branches.filter(b=>!b.archived).length <= 1 || loadAllUnits)) || (page === "imports" && branchId !== "all")) {
         sources.push([
           "units",
           collection(db, "branches", branch.id, "units"),
@@ -290,6 +293,7 @@ function App() {
     branchId,
     page,
     month,
+    page === "units" && branchId === "all" ? loadAllUnits : false,
   ]);
 
   useEffect(() => {
@@ -486,7 +490,7 @@ function App() {
               key={id}
               className={page === id ? "active" : ""}
               onClick={() => {
-                setPage(id);
+                setLoadAllUnits(false);setPage(id);
                 setMobile(false);
                 setSearch("");
               }}
@@ -633,9 +637,7 @@ function App() {
                     <select
                       aria-label="選擇據點"
                       value={branchId}
-                      onChange={(event) =>
-                        setBranchId(event.target.value)
-                      }
+                      onChange={(event)=>{setLoadAllUnits(false);setBranchId(event.target.value);}}
                     >
                       <option value="all">
                         全部可查看據點
@@ -1004,7 +1006,7 @@ function App() {
                   branches={visible} data={data} month={month}
                   global={Boolean(global)}
                 />
-                <OperationsInsights units={units} events={events} />
+                <LightInsights branches={visible} events={events} month={month} />
               </>}
               {page === "targets" && <Targets
                 branches={branches.filter(b=>!b.archived && (branchId === "all" || b.id === branchId))}
@@ -1014,6 +1016,17 @@ function App() {
               />}
               {page === "units" && (
                 <>
+      {branchId === "all" &&
+       branches.filter(b=>!b.archived).length > 1 &&
+       !loadAllUnits && (
+        <section className="panel target-panel">
+          <p>請在右上角選擇據點，即可查看倉位。需要跨據點查看時，可載入全部倉位。</p>
+          <button className="secondary" onClick={()=>setLoadAllUnits(true)}>
+            載入全部倉位
+          </button>
+        </section>
+      )}
+    
                   <div className="toolbar">
                     <div className="search">
                       <Search size={17} />
@@ -1739,7 +1752,7 @@ function App() {
               </form>
             )}
 
-            {modal.kind === "rentalDetails" && <RentalDetails type={modal.type} month={modal.month} total={modal.total} events={events} units={units} />}
+            {modal.kind === "rentalDetails" && <LazyUnits events={events.filter(e=>e.type===modal.type&&e.month===modal.month)} units={units}>{loaded=><RentalDetails type={modal.type} month={modal.month} total={modal.total} events={events} units={loaded} />}</LazyUnits>}
             {modal.kind === "chooseActivityDelete" && <>
               <p>請選擇要刪除的活動，下一步會確認刪除範圍。</p>
               {activities.filter(activity => activity.month === month).map(activity => <div className="activity-delete-row" key={`${activity.branchId}/${activity.id}`}>
@@ -1753,7 +1766,7 @@ function App() {
               <button className="primary danger" disabled={busy} onClick={() => run(() => call("removeActivity",{branchId:modal.activity.branchId,activityId:modal.activity.id}),"活動及使用紀錄已刪除")}>確認刪除活動</button>
             </>}
             {modal.kind === "activityUsage" && (
-              <ActivityUsage activity={modal.activity} month={modal.month} events={events} units={units} />
+              <LazyUnits events={events.filter(e=>e.activities?.some((a:Row)=>a.id===modal.activity.id))} units={units}>{loaded=><ActivityUsage activity={modal.activity} month={modal.month} events={events} units={loaded} />}</LazyUnits>
             )}
             {modal.kind === "event" && (
               <form

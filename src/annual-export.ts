@@ -1,5 +1,5 @@
 import { effectiveMonths } from "./actuals.js";
-import {collection,doc,getDoc,getDocs} from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, documentId, query, where } from "firebase/firestore";
 import {auth,db} from './firebase';
 import {compareBranches} from './branch-order.js';
 import {taipeiDate} from './domain.js';
@@ -44,6 +44,6 @@ export async function exportAnnualTargets(year:string){
  if(['admin','supervisor'].includes(actor.role)){const snapshot=await getDocs(collection(db,'branches'));branches=snapshot.docs.map(d=>({id:d.id,...d.data()}));}
  else {const snapshots=await Promise.all([...new Set<string>(actor.branchIds||[])].map(id=>getDoc(doc(db,'branches',id))));branches=snapshots.filter(s=>s.exists()).map(s=>({id:s.id,...s.data()}));}
  branches=branches.filter(b=>!b.archived);if(!branches.length)throw new Error('沒有可匯出的據點');
- const records:Row={};for(const b of branches){records[b.id]={};for(const c of ['targets','months','referrals','actuals']){const snapshot=await getDocs(collection(db,'branches',b.id,c));records[b.id][c]=snapshot.docs.map(d=>({id:d.id,...d.data()}));}}
+ const records:Row={};for(const b of branches){records[b.id]={};for(const c of ['targets','months','referrals','actuals']){const snapshot=await getDocs(query(collection(db,'branches',b.id,c),where(documentId(),'>=',year+'-01'),where(documentId(),'<',`${Number(year)+1}-01`)));records[b.id][c]=snapshot.docs.map(d=>({id:d.id,...d.data()}));}}
  const book=await createAnnualWorkbook(branches,records,year,taipeiDate());const buffer=await book.xlsx.writeBuffer();const blob=new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=`收多易_${year}_全據點月目標與轉介.xlsx`;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);
 }

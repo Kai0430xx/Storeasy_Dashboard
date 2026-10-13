@@ -2,7 +2,7 @@ import MonthlyEntry from "./MonthlyEntry";
 import { effectiveMonths } from "./actuals.js";
 import { compareBranches } from "./branch-order.js";
 import {useEffect,useState} from 'react';
-import {collection,getDocs,onSnapshot} from 'firebase/firestore';
+import { collection, getDocs, onSnapshot, doc, documentId, getDoc, query, where } from "firebase/firestore";
 import {db} from './firebase';
 import {saveGoal} from './targets-api';
 import {annualProgress} from './targets.js';
@@ -14,7 +14,7 @@ const keys=['occupancy','performance','referrals'];
 export default function GoalsOverview({branches,records:supplied,data,month,global,onEdit}:{branches:Row[];records?:Row;data:Row;month:string;global:boolean;onEdit?:(v:Row)=>void}){
  const [live,setLive]=useState<Row>({}),[all,setAll]=useState<Row[]|null>(null),[draft,setDraft]=useState<Row>({}),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[period,setPeriod]=useState(month);
  const year=month.slice(0,4),today=taipeiDate(),records=supplied||live;
- useEffect(()=>{if(supplied)return;setLive({});const stops=branches.flatMap(b=>['targets','referrals','actuals'].map(c=>onSnapshot(collection(db,'branches',b.id,c),s=>setLive(prev=>({...prev,[b.id]:{...prev[b.id],[c]:s.docs.map(d=>({id:d.id,...d.data()}))}})),e=>setMessage(e.message))));return()=>stops.forEach(s=>s());},[Boolean(supplied),branches.map(b=>b.id).join(',')]);
+ useEffect(()=>{if(supplied)return;setLive({});const stops=branches.flatMap(b=>['targets','referrals','actuals'].map(c=>onSnapshot(query(collection(db,'branches',b.id,c),where(documentId(),'>=',year),where(documentId(),'<',String(Number(year)+1))),s=>setLive(prev=>({...prev,[b.id]:{...prev[b.id],[c]:s.docs.map(d=>({id:d.id,...d.data()}))}})),e=>setMessage(e.message))));return()=>stops.forEach(s=>s());},[Boolean(supplied),branches.map(b=>b.id).join(','),year]);
  useEffect(()=>{if(!busy){setAll(null);setMessage('');}},[month]);
  const monthsFor=(b:Row)=>effectiveMonths(data[b.id]?.months||[],records[b.id]?.actuals||[]);
  const goal=(b:Row,p:string)=>records[b.id]?.targets?.find((v:Row)=>v.id===p);
@@ -23,7 +23,7 @@ export default function GoalsOverview({branches,records:supplied,data,month,glob
  const monthlyRef=(b:Row)=>referrals(b).find((r:Row)=>r.id===month);
  const mo=has(month,'occupancy'),mp=has(month,'performance'),mr=has(month,'referrals')||branches.some(b=>monthlyRef(b)?.count>0);
  const ao=has(year,'occupancy'),ap=has(year,'performance'),ar=has(year,'referrals')||branches.some(b=>referrals(b).some((r:Row)=>r.month?.startsWith(year+'-')&&r.month<=today.slice(0,7)&&r.count>0));
- async function loadDraft(list:Row[],p:string){const rows=await Promise.all(list.map(async b=>{const s=await getDocs(collection(db,'branches',b.id,'targets'));const g=s.docs.find(d=>d.id===p)?.data();return [b.id,Object.fromEntries(keys.map(k=>[k,g?.[k]??'']))] as const;}));setDraft(Object.fromEntries(rows));}
+ async function loadDraft(list:Row[],p:string){const rows=await Promise.all(list.map(async b=>{const s=await getDoc(doc(db,'branches',b.id,'targets',p));const g=s.data();return [b.id,Object.fromEntries(keys.map(k=>[k,g?.[k]??'']))] as const;}));setDraft(Object.fromEntries(rows));}
  async function open(){setBusy(true);setMessage('');try{const s=await getDocs(collection(db,'branches'));const list=s.docs.map(d=>({id:d.id,...d.data()})).filter((b:Row)=>!b.archived).sort(compareBranches);if(!list.length)throw Error('尚無據點');await loadDraft(list,month);setPeriod(month);setAll(list);}catch(e){setMessage(e instanceof Error?e.message:String(e));}finally{setBusy(false);}}
  async function changePeriod(p:string){if(!all)return;setBusy(true);setMessage('');try{await loadDraft(all,p);setPeriod(p);}catch(e){setMessage(String(e));}finally{setBusy(false);}}
  async function apply(e:React.FormEvent<HTMLFormElement>){e.preventDefault();if(!all)return;setBusy(true);let completed=0;const failed:string[]=[];for(const b of all){try{await saveGoal(b.id,period,draft[b.id]);completed++;}catch(err){failed.push(`${b.name}：${err instanceof Error?err.message:String(err)}`);}setMessage(`已處理 ${completed+failed.length}/${all.length} 間`);}setBusy(false);setMessage(`成功 ${completed} 間${failed.length?`；失敗 ${failed.length} 間：${failed.join('；')}`:''}`);if(!failed.length)setAll(null);}
