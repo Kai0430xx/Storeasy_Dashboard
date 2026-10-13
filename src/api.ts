@@ -1146,13 +1146,9 @@ export async function execute(
           }
         }
 
-        if (
-          month.total === null ||
-          month.rented === null ||
-          month.rented > month.total
-        ) {
+        if (month.total !== null && month.rented !== null && month.rented > month.total) {
           throw new Error(
-            `${month.month} 總倉或出租數不完整`
+            `${month.month} 已出租數不可大於總倉數`
           );
         }
       }

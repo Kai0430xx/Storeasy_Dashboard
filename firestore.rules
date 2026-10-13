@@ -445,6 +445,8 @@ service cloud.firestore {
           && (
             !('total' in request.resource.data)
             || !('rented' in request.resource.data)
+            || request.resource.data.total == null
+            || request.resource.data.rented == null
             || request.resource.data.rented
               <= request.resource.data.total
           );
