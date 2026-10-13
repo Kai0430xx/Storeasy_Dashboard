@@ -6,5 +6,7 @@ export function OtherGoalEditor({value={},onChange,disabled=false,label='其它�
 }
 export function OtherGoalResults({goals={},actuals={},future=false}:{goals?:Row;actuals?:Row;future?:boolean}){
  const rows=otherProgress(goals,actuals,future);
- return rows.length?<div>{rows.map((r:Row)=><p key={r.id}><strong>{r.name}</strong>：目標 {r.target}／實際 {r.actual??'未填'}・{r.result}</p>)}</div>:<>—</>;
+ return rows.length?<div>{rows.map((r:Row)=><p key={r.id}><strong>{r.name}</strong>：目標 {r.target}／實際 {r.actual??'未填'}・{r.result==='達標'?<strong className="goal-achieved">達標</strong>:r.result}</p>)}</div>:<>—</>;
 }
+
+// storeasy-achieved-red-v1

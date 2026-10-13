@@ -9,7 +9,7 @@ import {annualProgress,exitCategories,vacantDays} from './targets.js';
 import {saveGoal,saveReferrals,saveVacantSince} from './targets-api';
 type Row=Record<string,any>;
 const percent=(n:any)=>n==null?'待匯入':`${Number(n).toFixed(2)}%`;
-const result=(actual:any,target:any)=>target==null?'未設定':actual==null?'待匯入':actual>=target?'已達標':'未達標';
+const result=(actual:any,target:any)=>target==null?'未設定':actual==null?'待匯入':actual>=target?<strong className="goal-achieved">已達標</strong>:'未達標';
 export default function Targets({branches,month,profile,data}:{branches:Row[];month:string;profile:Row;data:Row}){
  const [records,setRecords]=useState<Row>({}),[editing,setEditing]=useState<Row|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
  const [entries,setEntries]=useState<Row[]>([]),[history,setHistory]=useState<Row|null>(null);
@@ -62,8 +62,8 @@ export default function Targets({branches,month,profile,data}:{branches:Row[];mo
     {global&&<button onClick={()=>setEditing({kind:'goal',branch:b,period:year,values:annual||{}})}>設定年度目標</button>}
     <p>已結束 {progress.completed} 個月，剩餘 {progress.remaining} 個月。{progress.missing>0&&`有 ${progress.missing} 個已結束月份缺少業績完成率 KPI，補齊前不推算年度需求。`}</p>
     <div className="table-wrap"><table><thead><tr><th>指標</th><th>年度目標</th><th>目前進度</th><th>尚需完成</th></tr></thead><tbody>
-     {(annual?.performance!=null)&&<tr><td>業績完成率（全年平均）</td><td>{annual?.performance==null?'未設定':percent(annual.performance)}</td><td>{progress.average==null?'待完整 KPI':percent(progress.average)}{progress.completed===12&&`・${result(progress.average,annual?.performance)}`}</td><td>{annual?.performance==null?'未設定':progress.remaining===0?'年度已結束':progress.required==null?'待完整 KPI':`剩餘月份平均需 ${percent(progress.required)}`}</td></tr>}
-     {(annual?.occupancy!=null)&&<tr><td>出租率（12 月達標）</td><td>{annual?.occupancy==null?'未設定':percent(annual.occupancy)}</td><td>{percent(progress.occupancy)}{progress.finalOccupancy!=null&&`・12 月 ${result(progress.finalOccupancy,annual?.occupancy)}`}</td><td>{annual?.occupancy==null?'未設定':progress.occupancy==null?'待資料':`差 ${Math.max(0,annual.occupancy-progress.occupancy).toFixed(2)} 個百分點${progress.unitsNeeded==null?'':`，需再出租 ${progress.unitsNeeded} 間`}`}</td></tr>}
+     {(annual?.performance!=null)&&<tr><td>業績完成率（全年平均）</td><td>{annual?.performance==null?'未設定':percent(annual.performance)}</td><td>{progress.average==null?'待完整 KPI':percent(progress.average)}{progress.completed===12&&<>・{result(progress.average,annual?.performance)}</>}</td><td>{annual?.performance==null?'未設定':progress.remaining===0?'年度已結束':progress.required==null?'待完整 KPI':`剩餘月份平均需 ${percent(progress.required)}`}</td></tr>}
+     {(annual?.occupancy!=null)&&<tr><td>出租率（12 月達標）</td><td>{annual?.occupancy==null?'未設定':percent(annual.occupancy)}</td><td>{percent(progress.occupancy)}{progress.finalOccupancy!=null&&<>・12 月 {result(progress.finalOccupancy,annual?.occupancy)}</>}</td><td>{annual?.occupancy==null?'未設定':progress.occupancy==null?'待資料':`差 ${Math.max(0,annual.occupancy-progress.occupancy).toFixed(2)} 個百分點${progress.unitsNeeded==null?'':`，需再出租 ${progress.unitsNeeded} 間`}`}</td></tr>}
      {(annual?.referrals!=null||progress.referred>0)&&<tr><td>轉介數量（全年加總）</td><td>{annual?.referrals??'未設定'}</td><td>本年度已填合計 {progress.referred} 間</td><td>{annual?.referrals==null?'未設定':`差 ${Math.max(0,annual.referrals-progress.referred)} 間${progress.referralsRequired==null?'':`，剩餘每月平均 ${progress.referralsRequired.toFixed(2)} 間`}`}</td></tr>}
     </tbody></table></div>
     <p className="hint">年度業績採每月完成率平均。出租率以倉位數計算；本年度差距使用目前倉位現況，12 月結果使用匯入 KPI。倉位數變動時所需間數會隨之調整。</p>
@@ -105,3 +105,5 @@ export function OperationsInsights({units,events}:{units:Row[];events:Row[]}){
 }
 
 // storeasy-other-monthly-v1
+
+// storeasy-achieved-red-v1

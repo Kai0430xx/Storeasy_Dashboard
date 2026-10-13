@@ -10,7 +10,7 @@ import {annualProgress} from './targets.js';
 import {taipeiDate} from './domain.js';
 type Row=Record<string,any>;
 const pct=(n:any)=>n==null?'—':`${Number(n).toFixed(2)}%`;
-const mark=(v:any,g:any)=>g==null?'—':v==null?'待資料':v>=g?'達標':'未達標';
+const mark=(v:any,g:any)=>g==null?'—':v==null?'待資料':v>=g?<strong className="goal-achieved">達標</strong>:'未達標';
 const keys=['occupancy','performance','referrals'];
 export default function GoalsOverview({branches,records:supplied,data,month,global,onEdit}:{branches:Row[];records?:Row;data:Row;month:string;global:boolean;onEdit?:(v:Row)=>void}){
  const [live,setLive]=useState<Row>({}),[all,setAll]=useState<Row[]|null>(null),[draft,setDraft]=useState<Row>({}),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[period,setPeriod]=useState(month);
@@ -51,3 +51,5 @@ export default function GoalsOverview({branches,records:supplied,data,month,glob
 }
 
 // storeasy-other-monthly-v1
+
+// storeasy-achieved-red-v1

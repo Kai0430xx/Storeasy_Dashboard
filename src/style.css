@@ -463,3 +463,6 @@ button.flow-row:hover { background:#f4f7fb; }
 .modal[aria-label="本月實際數值與轉介"] { width: min(800px, calc(100vw - 24px)); max-height: 94dvh; overflow-y: auto; }
 
 /* storeasy-other-monthly-v1 */
+
+/* storeasy-achieved-red-v1 */
+.goal-achieved { color: #b91c1c; font-weight: 700; }

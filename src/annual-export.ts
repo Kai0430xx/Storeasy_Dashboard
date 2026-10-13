@@ -41,6 +41,17 @@ export async function createAnnualWorkbook(branches:Row[],records:Row,year:strin
  for(const r of rows)for(const g of r.other)otherSheet.addRow({name:r.name,month:r.month,goalName:g.name,target:g.target,actual:g.actual??'未填',result:g.result});
  for(const sheet of [summary,details,otherSheet]){sheet.views=[{state:'frozen',xSplit:1,ySplit:1}];sheet.autoFilter={from:{row:1,column:1},to:{row:sheet.rowCount,column:sheet.columnCount}};sheet.getRow(1).height=28;sheet.getRow(1).eachCell(c=>{c.font={bold:true,color:{argb:'FFFFFFFF'}};c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF193F72'}};});}
  const notes=book.addWorksheet('說明');notes.addRows([['報表年度',year],['匯出日期（台灣）',today],['範圍','所有有權限查看且未封存的據點，不受畫面單一據點篩選影響'],['達標規則','月目標有設定的各項指標全部達標，整體才列為達標；有缺值列為資料未齊。'],['資料來源','出租率與業績完成率使用匯入 KPI；轉介使用各月手填明細數量；其它目標使用店長手填實際數量，達到目標數量即達標。'],['缺值','未設定目標、未匯入 KPI、未填轉介與未到月份會分別標示，不當成 0。'],['轉介提示','當月超過 3 筆以紅字標示年終加成，未自行計算獎金。'],['年度目標','本報表比較每月目標，不以年度目標代替未設定的月目標。']]);notes.getColumn(1).width=24;notes.getColumn(2).width=100;
+ for (const sheet of book.worksheets) {
+  if (sheet.name === '說明') continue;
+  sheet.eachRow((row, rowNumber) => {
+   if (rowNumber === 1) return;
+   row.eachCell(cell => {
+    if (cell.value === '達標' || cell.value === '已達標') {
+     cell.font = {...cell.font, bold:true, color:{argb:'FFB91C1C'}};
+    }
+   });
+  });
+ }
  return book;
 }
 export async function exportAnnualTargets(year:string){
@@ -54,3 +65,5 @@ export async function exportAnnualTargets(year:string){
 }
 
 // storeasy-other-monthly-v1
+
+// storeasy-achieved-red-v1
