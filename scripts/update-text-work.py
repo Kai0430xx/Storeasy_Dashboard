@@ -178,6 +178,41 @@ payload = (
     'Wf9uPTQqEIg3VR0Qjy8YC/wLTtwWA/tB0BlLclhBS3wcXUlLzJ5TgyqRluMm4xwcRqcDgIcG/x/2fibeh7gAAA=='
 )
 
+# 修正壓縮字串，後面的完整性校驗仍會執行。
+repairs = [
+    ('ReQwZROXkN2RmESM', 'ReQwZROXXkN2RmESM'),
+    ('k9DQofb9yNnIj4+U9MTm+u7VHfDAsTF0A26IyvHhD49kVQta4B4Mx', 'k9DQoFb9yNnIj4+U9MTm+u7VHfDAsTF0A26IyvHhD49kvQta4B4Mx'),
+    ('zZBZqRnfJ3RP7pjI', 'zZBZqRnfwJ3RP7pjI'),
+    ('CUQnUGgfxjhrNPx2A7m', 'CUQnUGgffxjrNPx2A7m'),
+    ('CLKRHDNGuHbjtREmXj9zhal58hWcsrzuZ4aDk3F4', 'CLKRHDNGUuHbjtREmXj9zhal58hWcsrzubZ4aDk3F4'),
+    ('FID2vjqic/B4JRmKmM', 'FID2vjqi/cB4JRmKmM'),
+    ('KUoNMspawj+aFJmFK', 'KUoNMspaWj+aFJmFK'),
+    ('ewY8S1SkHZ0vog0n', 'ewY8S1SkkHZ0vog0n'),
+    ('5lTHZOsphHOEd7WHj', '5lTHZOspHOEd7WHj'),
+    ('K3xcpBKu/dSlMoVC', 'K3xcpBKur/dSlMoVC'),
+    ('G3oR9+ufB9EgKLt7UpTOyCFP4rdUQdmYCxZr5T1t0zUZTifllZdxhdns', 'G3oR9+ufoB9EgKLt7UpTOyCFP4rdUQdmYCxZrr5T1t0zUZTilflZdxhdns'),
+    ('iihcWgaf5Qj3wGX3', 'iihcWgaff5Qj3wGX3'),
+    ('A8UdIlmeH13pHxtM', 'A8UdIlmenH13pHxtM'),
+    ('qPBHFckcinLlnb4r', 'qPBHFckccinLlnb4r'),
+    ('+OelRPoeFMkGvgH+', '+OelRPoecFMkGvgH+'),
+    ('cNMSmilus7lyGXPpZ', 'cNMSmiluS7lyGXPpZ'),
+    ('01RIFmeJrIQ2erAeRbWoaYuJqUJNyJYwpkUbIporKYM34AMp53HmoEuXUVtO4', '01RIFmeJarIQ2erAeRbWoaYuJqUJNyJYwpkUbIporKYM34AMp53HmolEuXUVtO4'),
+    ('SpY0peliEsArBnQpB', 'SpY0peliesArBnQpB'),
+    ('iQN5mkKnsUg0M/ZZ8', 'iQN5mkKnSUg0M/ZZ8'),
+    ('XHDMbCcj5EdyOOXxHIFoWh0OXWnfRokA4/b8qKm', 'XHDMbCcjj5EdyOOXxHIFoWh0OXWnfRokaA4/b8qKm'),
+    ('2nOF4lojyrfib2EW', '2nOF4lojjyrfib2EW'),
+    ('o/QXm4TUqaTjxi', 'o/QXm4TUbqaTjxi'),
+    ('jZsRm1TUmsRcoGmkKa', 'jZsRm1TUsmRcoGmkKa'),
+    ('z3ul8XEAK2JK7WyLJ', 'z3ul8XEAk2JK7WyLJ'),
+    ('AszwWP8ez82RtRGUxybkLBOAKe6', 'AszwWP8eez82RtRGUxybhkLBOAKe6'),
+]
+
+for old, new in repairs:
+    if old in payload:
+        if payload.count(old) != 1:
+            raise RuntimeError('修正位置不唯一，尚未修改任何檔案')
+        payload = payload.replace(old, new, 1)
+
 packed = base64.b64decode(payload, validate=True)
 if hashlib.sha256(packed).hexdigest() != 'd39710736dac983414e13b08d5084728c6ba6228128549a9727bde31103f475f':
     raise RuntimeError('更新內容校驗失敗，尚未修改任何檔案；請完整貼上程式。')
