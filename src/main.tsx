@@ -1016,7 +1016,7 @@ function App() {
                 />
                 <LightInsights branches={visible} events={events} month={month} />
               </>}
-              {page === "work" && canWrite && <WorkTasks profile={profile} branches={branches.filter(b=>!b.archived)} branchId={branchId} {...work} />}
+              {page === "work" && canWrite && <WorkTasks profile={profile} branches={branches.filter(b=>!b.archived)} branchId={branchId} peopleUsers={users} onSelectBranch={setBranchId} {...work} />}
               {page === "targets" && <Targets
                 branches={branches.filter(b=>!b.archived && (branchId === "all" || b.id === branchId))}
                 month={month}
@@ -2707,3 +2707,5 @@ createRoot(
 // storeasy-work-polish-v1
 
 // storeasy-work-reconnect-v1
+
+// storeasy-work-team-v1

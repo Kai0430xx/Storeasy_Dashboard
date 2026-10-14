@@ -74,32 +74,16 @@ export async function execute(
 
   switch (name) {
     case "registerProfile": {
-      if (
-        auth.currentUser?.email !==
-        loginEmail(data.username)
-      ) {
-        throw new Error("帳號不符");
-      }
-
-      const ref = doc(db, "users", me);
-
-      await runTransaction(db, async (transaction) => {
-        const existing = await transaction.get(ref);
-
-        if (!existing.exists()) {
-          transaction.set(ref, {
-            username: data.username,
-            role: "pending",
-            branchIds: [],
-            mustChangePassword: false,
-            createdAt: time()
-          });
-        }
+      if (auth.currentUser?.email !== loginEmail(data.username)) throw new Error("帳號不符");
+      const ref = doc(db,"users",me), person = doc(db,"workPeople",me);
+      await runTransaction(db,async transaction=>{
+        const existing = await transaction.get(ref), directory = await transaction.get(person);
+        const username = existing.exists()?existing.data().username:data.username;
+        if(!existing.exists()) transaction.set(ref,{username,role:"pending",branchIds:[],mustChangePassword:false,createdAt:time()});
+        if(!directory.exists()||directory.data().username!==username)transaction.set(person,{username});
       });
-
       return {};
     }
-
     case "passwordChanged": {
       const ref = doc(db, "users", me);
       const batch = writeBatch(db);
@@ -161,6 +145,7 @@ export async function execute(
             }
           );
 
+          batch.set(doc(otherDb, "workPeople", user.user.uid), {username: data.username});
           await batch.commit();
         } finally {
           await deleteApp(app);
@@ -1249,3 +1234,5 @@ export async function execute(
 // storeasy-opening-month-v1
 
 // storeasy-annual-renew-backfill-v2
+
+// storeasy-work-team-v1

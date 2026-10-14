@@ -33,7 +33,10 @@ export async function deleteUserAccount(data: any) {
       deletedAt: serverTimestamp(),
     });
     transaction.delete(targetRef);
+    transaction.delete(doc(db, "workPeople", data.uid));
   });
 
   return {};
 }
+
+// storeasy-work-team-v1
