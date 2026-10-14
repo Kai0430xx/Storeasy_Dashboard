@@ -417,6 +417,15 @@ service cloud.firestore {
       }
 
       match /months/{month} {
+    function validRenewTerms(d) {
+     let v=d.get('renewByTerm',null);
+     return v == null || (d.source == 'import' && v is map
+      && v.keys().hasAll(['monthly','quarterly','halfYear','yearly'])
+      && v.keys().hasOnly(['monthly','quarterly','halfYear','yearly'])
+      && optionalCount(v,'monthly') && optionalCount(v,'quarterly') && optionalCount(v,'halfYear') && optionalCount(v,'yearly')
+      && (v.monthly == null || v.quarterly == null || v.halfYear == null || v.yearly == null || !('renew' in d) || d.renew == null
+       || v.monthly + v.quarterly + v.halfYear + v.yearly == d.renew));
+    }
         function keepsAmounts() {
           return
             !exists(
@@ -440,7 +449,7 @@ service cloud.firestore {
           && month.matches(
             '[0-9]{4}-(0[1-9]|1[0-2])'
           )
-          && keepsAmounts()
+          && keepsAmounts() && validRenewTerms(request.resource.data)
           && request.resource.data.source in ['live','import']
           && optionalCount(request.resource.data, 'total')
           && optionalCount(request.resource.data, 'rented')
@@ -601,3 +610,5 @@ service cloud.firestore {
 // storeasy-other-monthly-v1
 
 // storeasy-opening-month-v1
+
+// storeasy-annual-renew-backfill-v2

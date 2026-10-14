@@ -275,6 +275,7 @@ export function parseKpi(book) {
           `${year}-` +
           String(column).padStart(2, "0"),
 
+        renewByTerm: Object.fromEntries(["monthly","quarterly","halfYear","yearly"].map((key,index)=>[key,renewValues[index]])),
         amounts: kpiAmounts(rows, column), kpiMetrics: kpiMetrics(rows, column, year),
         total: totalValue,
         rented: rentedValue,
@@ -298,3 +299,5 @@ export function parseKpi(book) {
     (a, b) => a.month.localeCompare(b.month)
   );
 }
+
+// storeasy-annual-renew-backfill-v2

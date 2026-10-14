@@ -22,6 +22,7 @@ export async function saveGoal(branchId:string,period:string,values:any,preserve
     }
   }
   goal.other=period.length===7?normalizeOtherGoals(values.other??old.data()?.other??{}):{};
+  if(period.length===4)goal.referrals=null;
   const next={...goal,period,revision:(old.data()?.revision||0)+1,updatedBy:uid,updatedAt:serverTimestamp(),changeId:audit.id};
   t.set(ref,next);t.set(audit,{period,previous:old.data()||null,next,by:uid,createdAt:serverTimestamp()});
  });
@@ -48,3 +49,5 @@ export async function saveVacantSince(branchId:string,code:string,date:string){
 }
 
 // storeasy-other-monthly-v1
+
+// storeasy-annual-renew-backfill-v2

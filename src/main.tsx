@@ -1753,7 +1753,7 @@ function App() {
               </form>
             )}
 
-            {modal.kind === "rentalDetails" && <LazyUnits events={events.filter(e=>e.type===modal.type&&e.month===modal.month)} units={units}>{loaded=><RentalDetails type={modal.type} month={modal.month} total={modal.total} events={events} units={loaded} />}</LazyUnits>}
+            {modal.kind === "rentalDetails" && <LazyUnits events={events.filter(e=>e.type===modal.type&&e.month===modal.month)} units={units}>{loaded=><RentalDetails type={modal.type} month={modal.month} total={modal.total} events={events} units={loaded} kpiMonths={branches.filter(b=>!b.archived&&(branchId==='all'||b.id===branchId)).flatMap(b=>{const m=(data[b.id]?.months||[]).find((r:Row)=>(r.month||r.id)===modal.month);return m?.source==='import'?[{...m,branchId:b.id,branchName:b.name}]:[];})} />}</LazyUnits>}
             {modal.kind === "chooseActivityDelete" && <>
               <p>請選擇要刪除的活動，下一步會確認刪除範圍。</p>
               {activities.filter(activity => activity.month === month).map(activity => <div className="activity-delete-row" key={`${activity.branchId}/${activity.id}`}>
@@ -1947,13 +1947,13 @@ function App() {
                     () => call(
                       modal.kind === "inventory"
                         ? "importInventory"
-                        : "importKpi",
+                        : payload.backfillOnly ? "backfillRenewals" : "importKpi",
                       {
                         branchId: modal.branchId,
-                        ...payload,
+                        existingMonths: data[modal.branchId]?.months || [], ...payload,
                       },
                     ),
-                    "資料匯入完成",
+                    payload.backfillOnly ? "續約租期分項已補齊（相同分項不重寫）" : "資料匯入完成",
                   )
                 }
                 onError={setError}
@@ -2668,6 +2668,7 @@ function ImportForm({
             </>
           )}
 
+          {kind === "kpi" && <><p>分析在本機執行。若只需要補上舊 KPI 的續約方案，請用「只補續約租期分項」；相同分項不重寫。</p><button className="secondary" disabled={busy || !preview.months.length} onClick={()=>onSubmit({...preview,backfillOnly:true})}>只補續約租期分項</button></>}
           <button
             className="primary submit"
             disabled={
@@ -2689,3 +2690,5 @@ createRoot(
 ).render(<App />);
 
 // storeasy-opening-month-v1
+
+// storeasy-annual-renew-backfill-v2

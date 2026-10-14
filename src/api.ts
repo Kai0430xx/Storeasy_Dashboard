@@ -1,3 +1,4 @@
+import {validateRenewCounts} from './renewal-kpi.js';
 import { exitCategories, vacancyDate } from "./targets.js";
 import { deleteUserAccount } from "./delete-user";
 import { removeActivity } from "./remove-activity";
@@ -1061,6 +1062,10 @@ export async function execute(
       return stats;
     }
 
+    case "backfillRenewals": {
+      const {backfillRenewals}=await import('./backfill-renewals');
+      return backfillRenewals(data.branchId,data.months,data.existingMonths,data.kpiFile);
+    }
     case "importKpi": {
       const branchDoc = branch(data.branchId);
 
@@ -1211,6 +1216,7 @@ export async function execute(
               rented: month.rented,
               new: month.new,
               renew: month.renew,
+              renewByTerm: validateRenewCounts(month.renewByTerm,month.renew) || existingMonths.get(month.month)?.renewByTerm || null,
               exit: month.exit,
               kpiMetrics: month.kpiMetrics || {revenue:null,performance:null,occupancy:null},
               amounts: frozenAmounts(
@@ -1241,3 +1247,5 @@ export async function execute(
 }
 
 // storeasy-opening-month-v1
+
+// storeasy-annual-renew-backfill-v2

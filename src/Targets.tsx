@@ -1,3 +1,4 @@
+import {referralMonths} from './referral-months.js';
 import {OtherGoalEditor,OtherGoalResults} from './OtherGoals';
 import { effectiveMonths } from "./actuals.js";
 import GoalsOverview from "./GoalsOverview";
@@ -64,8 +65,9 @@ export default function Targets({branches,month,profile,data}:{branches:Row[];mo
     <div className="table-wrap"><table><thead><tr><th>指標</th><th>年度目標</th><th>目前進度</th><th>尚需完成</th></tr></thead><tbody>
      {(annual?.performance!=null)&&<tr><td>業績完成率（全年平均）</td><td>{annual?.performance==null?'未設定':percent(annual.performance)}</td><td>{progress.average==null?'待完整 KPI':percent(progress.average)}{progress.totalMonths>0&&progress.completed===progress.totalMonths&&<>・{result(progress.average,annual?.performance)}</>}</td><td>{annual?.performance==null?'未設定':progress.remaining===0?'年度已結束':progress.required==null?'待完整 KPI':`剩餘月份平均需 ${percent(progress.required)}`}</td></tr>}
      {(annual?.occupancy!=null)&&<tr><td>出租率（12 月達標）</td><td>{annual?.occupancy==null?'未設定':percent(annual.occupancy)}</td><td>{percent(progress.occupancy)}{progress.finalOccupancy!=null&&<>・12 月 {result(progress.finalOccupancy,annual?.occupancy)}</>}</td><td>{annual?.occupancy==null?'未設定':progress.occupancy==null?'待資料':`差 ${Math.max(0,annual.occupancy-progress.occupancy).toFixed(2)} 個百分點${progress.unitsNeeded==null?'':`，需再出租 ${progress.unitsNeeded} 間`}`}</td></tr>}
-     {(annual?.referrals!=null||progress.referred>0)&&<tr><td>轉介數量（全年加總）</td><td>{annual?.referrals??'未設定'}</td><td>本年度已填合計 {progress.referred} 間</td><td>{annual?.referrals==null?'未設定':`差 ${Math.max(0,annual.referrals-progress.referred)} 間${progress.referralsRequired==null?'':`，剩餘每月平均 ${progress.referralsRequired.toFixed(2)} 間`}`}</td></tr>}
+
     </tbody></table></div>
+    <p>轉介 3 筆以上月份數：{referralMonths(year,today,refs,b)}</p>
     <p className="hint">年度業績採每月完成率平均。出租率以倉位數計算；本年度差距使用目前倉位現況，12 月結果使用匯入 KPI。倉位數變動時所需間數會隨之調整。</p>
     <h3>本月轉介明細 {monthly?.referrals!=null?'（必填）':'（選填）'}</h3>
     {edit&&month<=today.slice(0,7)&&<button onClick={()=>{setEntries(ref?.entries||[]);setEditing({kind:'referrals',branch:b});}}>填寫／修改轉介</button>}
@@ -80,7 +82,7 @@ export default function Targets({branches,month,profile,data}:{branches:Row[];mo
     <p>留白代表未設定；百分比請輸入 80，表示 80%。</p>
     <label>出租率目標（%）<input name="occupancy" type="number" min="0" max="100" step="0.01" defaultValue={editing.values.occupancy??''}/></label>
     <label>業績完成率目標（%）<input name="performance" type="number" min="0" step="0.01" defaultValue={editing.values.performance??''}/></label>
-    <label>轉介數量目標<input name="referrals" type="number" min="0" step="1" defaultValue={editing.values.referrals??''}/></label>
+    {editing.period.length===7&&<label>轉介數量目標<input name="referrals" type="number" min="0" step="1" defaultValue={editing.values.referrals??''}/></label>}
     {editing.period.length===7&&<OtherGoalEditor value={editing.values.other||{}} disabled={busy} onChange={other=>setEditing(v=>v?{...v,values:{...v.values,other}}:v)}/>}
     <button className="primary" disabled={busy}>儲存目標</button>
    </form>:<form onSubmit={e=>{e.preventDefault();run(()=>saveReferrals(editing.branch.id,month,entries));}}>
@@ -109,3 +111,5 @@ export function OperationsInsights({units,events}:{units:Row[];events:Row[]}){
 // storeasy-achieved-red-v1
 
 // storeasy-opening-month-v1
+
+// storeasy-annual-renew-backfill-v2
