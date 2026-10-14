@@ -3,6 +3,12 @@ import {collection,doc,query,where,onSnapshot,runTransaction,serverTimestamp,Tim
 import {auth,db} from './firebase';
 export type WorkRow=Record<string,any>;
 export const workRoles=['admin','supervisor','manager'];
+export const isWorkQuota=(error:any):boolean=>String(error?.code||'').includes('resource-exhausted')||/quota|額度已用完/i.test(String(error?.message||error||''));
+export function workError(error:any):string {
+ if(isWorkQuota(error))return 'Firebase 額度已用完，暫時無法讀取或儲存資料。請等額度重置後重新整理再試；目前輸入的訊息尚未送出，會保留在輸入框。';
+ if(String(error?.code||error?.message||'').includes('permission'))return '操作遭拒：請確認最新 Firestore 規則已發布，且你仍有此據點權限。';
+ return String(error?.message||error||'操作失敗，請稍後再試');
+}
 export const stamp=(v:any):number=>v?.toMillis?.()||0;
 export function unreadThreads(task:WorkRow,receipt?:WorkRow,uid=auth.currentUser?.uid){
  return Object.keys(task.signals||{}).filter(thread=>Object.entries(task.signals[thread]).some(([actor,time])=>actor!==uid&&stamp(time)>stamp(receipt?.seen?.[thread])));
@@ -15,8 +21,8 @@ export function useWorkTasks(profile:WorkRow|null){
   const parts=new Map<number,WorkRow[]>();const stops:(()=>void)[]=[];const scopes:any[]=[];
   if(['admin','supervisor'].includes(profile.role))scopes.push(collection(db,'workTasks'));
   else for(let i=0;i<(profile.branchIds||[]).length;i+=30)scopes.push(query(collection(db,'workTasks'),where('branchIds','array-contains-any',profile.branchIds.slice(i,i+30))));
-  scopes.forEach((q,i)=>stops.push(onSnapshot(q,(s:any)=>{parts.set(i,s.docs.map((d:any)=>({id:d.id,...d.data()})));setTasks([...new Map([...parts.values()].flat().map(t=>[t.id,t])).values()]);},(e:any)=>setError(e.message))));
-  stops.push(onSnapshot(query(collection(db,'workReads'),where('uid','==',uid)),s=>setReads(Object.fromEntries(s.docs.map(d=>[d.data().taskId,d.data()]))),e=>setError(e.message)));
+  scopes.forEach((q,i)=>stops.push(onSnapshot(q,(s:any)=>{parts.set(i,s.docs.map((d:any)=>({id:d.id,...d.data()})));setTasks([...new Map([...parts.values()].flat().map(t=>[t.id,t])).values()]);},(e:any)=>setError(workError(e)))));
+  stops.push(onSnapshot(query(collection(db,'workReads'),where('uid','==',uid)),s=>setReads(Object.fromEntries(s.docs.map(d=>[d.data().taskId,d.data()]))),e=>setError(workError(e))));
   return()=>stops.forEach(s=>s());
  },[uid,profile?.role,JSON.stringify(profile?.branchIds)]);
  return {tasks,reads,error,hasUnread:tasks.some(t=>unreadThreads(t,reads[t.id]).some(thread=>!t.deleted||thread==='main'))};
@@ -105,3 +111,5 @@ export async function markWorkRead(task:WorkRow,thread:string){
  });
 }
 export async function loadWorkHistory(taskId:string){return (await getDocs(query(collection(db,'workTasks',taskId,'history'),orderBy('at','desc'),limit(100)))).docs.map(d=>({id:d.id,...d.data()}));}
+
+// storeasy-work-polish-v1

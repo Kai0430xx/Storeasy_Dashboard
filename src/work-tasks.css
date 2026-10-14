@@ -3,3 +3,15 @@
 .work-detail{position:static;display:block;height:auto;flex-shrink:0;width:auto;z-index:auto;gap:0;box-shadow:none}.work-filters label,.work-complete{flex-direction:row;margin:0}.work-branch-options label{flex-direction:row}.work-toolbar>.work-add,.work-composer>button,.work-dialog form>button{background:#173f75;color:#fff;padding:10px 15px}.work-task.selected strong{color:#173f75}.work-dialog>.work-toolbar{margin-bottom:12px}.work-detail .work-toolbar h2{overflow-wrap:anywhere;min-width:0}.work-version{max-height:45dvh;overflow:auto}
 
 nav button .dot[aria-label="待辦事項有未讀變動"]{background:#d52132}
+
+/* storeasy-work-polish-v1 */
+.modal.wide.work-dialog{width:min(900px,94vw);max-height:94dvh}
+.modal.work-dialog .work-branch-fieldset{max-height:none;overflow:visible;padding:16px;margin:16px 0}
+.modal.work-dialog .work-branch-fieldset>label{margin:0}
+.work-branch-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;font-size:13px;color:#647692}
+.modal.work-dialog .work-branch-options{grid-template-columns:repeat(2,minmax(0,1fr));max-height:38dvh;overflow:auto;padding:2px 6px 2px 2px;gap:8px}
+.modal.work-dialog .work-branch-options label{display:flex;flex-direction:row;justify-content:flex-start;gap:10px;min-width:0;min-height:46px;padding:10px 12px;margin:0;border:1px solid #dce5f1;border-radius:8px;background:#fff;cursor:pointer}
+.modal.work-dialog .work-branch-options label.chosen{background:#edf3fe;border-color:#8ca9d7}
+.modal.work-dialog .work-branch-options input{width:18px;min-width:18px;height:18px;flex:0 0 18px;margin:0;padding:0;accent-color:#173f75}
+.modal.work-dialog .work-branch-options span{flex:1;min-width:0;white-space:nowrap;line-height:1.5;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:540px){.modal.work-dialog{padding:18px}.modal.work-dialog .work-branch-options{grid-template-columns:1fr;max-height:40dvh}.work-branch-toolbar{flex-wrap:wrap}}
