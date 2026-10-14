@@ -46,7 +46,8 @@ export function useWorkTasks(profile:WorkRow|null){
 }
 function actor(profile:WorkRow){if(!auth.currentUser)throw new Error('請重新登入');return {uid:auth.currentUser.uid,name:profile.username||'未命名帳號'};}
 function fields(input:WorkRow){
- const result={title:String(input.title||'').trim(),description:String(input.description||'').trim(),assignee:String(input.assignee||'').trim(),directAssigneeIds:[...new Set<string>(input.directAssigneeIds||[])].sort(),due:input.due||'',priority:input.priority||'normal'};
+ const result={category:String(input.category||'其它'),title:String(input.title||'').trim(),description:String(input.description||'').trim(),assignee:String(input.assignee||'').trim(),directAssigneeIds:[...new Set<string>(input.directAssigneeIds||[])].sort(),due:input.due||'',priority:input.priority||'normal'};
+ if(!result.category||result.category.length>30||result.category.includes('/'))throw new Error('分類不合法');
  if(!result.title||result.title.length>120)throw new Error('標題須為1～120字');
  if(result.directAssigneeIds.length>100||result.directAssigneeIds.some(id=>typeof id!=='string'||!id||id.includes('/')))throw new Error('指派對象不合法或超過100人');
  if(result.description.length>5000||result.assignee.length>80)throw new Error('內容最多5000字，負責人最多80字');
@@ -88,6 +89,7 @@ export async function workAction(profile:WorkRow,taskId:string,action:string,thr
   const rs=await tx.get(root);if(!rs.exists())throw new Error('事項不存在');const r=rs.data();
   const sub=item?await tx.get(item):null,target=item?sub?.data():r;
   const oldMessage=action==='messageEdit'||action==='messageDelete'?await tx.get(message):null;
+  if(r.purging)throw new Error('事項正在永久刪除，請完成清除後再操作');
   if(r.deleted&&action!=='restore')throw new Error('事項已移到垃圾桶');
   if(item&&(!target||target.deleted)&&action!=='itemRestore')throw new Error('子項目已刪除或不存在');
   const pending:any[]=[];
@@ -149,3 +151,5 @@ export async function markWorkRead(task:WorkRow,thread:string){
 export async function loadWorkHistory(taskId:string){return (await getDocs(query(collection(db,'workTasks',taskId,'history'),orderBy('at','desc'),limit(100)))).docs.map(d=>({id:d.id,...d.data()}));}
 
 // storeasy-work-team-v1
+
+// storeasy-work-categories-v1

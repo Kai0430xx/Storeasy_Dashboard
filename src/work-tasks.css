@@ -59,3 +59,11 @@ nav button .dot[aria-label="待辦事項有未讀變動"]{background:#d52132}
 }
 
 /* storeasy-work-team-v1 */
+
+/* storeasy-work-categories-v1 */
+.work-categories{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0 16px}
+.work-categories>button{border:1px solid #dce5f1;border-radius:8px;padding:8px 12px;font-size:13px;background:#fff;color:#173f75}
+.work-categories>button.selected{background:#173f75;color:#fff;border-color:#173f75}
+.work-categories>button>span{margin-left:5px;font-variant-numeric:tabular-nums;opacity:.8}
+
+/* storeasy-work-categories-v1 */

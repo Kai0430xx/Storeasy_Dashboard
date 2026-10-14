@@ -602,6 +602,17 @@ service cloud.firestore {
     }
 
   // storeasy-work-tasks-v1: private branch tasks, immutable audit and text chat
+  function workPurging(id) {
+   return globalAccess() && exists(/databases/$(database)/documents/workTasks/$(id))
+    && workRoot(id).deleted && workRoot(id).get('purging',false)==true;
+  }
+  match /workCategories/{name} {
+   allow read: if workUser();
+   allow create: if globalAccess() && name.size()>0 && name.size()<=30 && !(name in ['.','..'])
+    && request.resource.data.keys().hasOnly(['name','createdBy','createdAt'])
+    && request.resource.data.name==name && request.resource.data.createdBy==request.auth.uid && request.resource.data.createdAt==request.time;
+   allow update,delete: if false;
+  }
   function workUser() { return activeUser() && profile().role in ['admin','supervisor','manager']; }
   function workAssigned(d,id) {
    let path=/databases/$(database)/documents/workTaskAccess/$(request.auth.uid+'_'+id);
@@ -624,7 +635,8 @@ service cloud.firestore {
   function workVersion(id) { let r=workAfter(id);return getAfter(/databases/$(database)/documents/workTasks/$(id)/versions/$(r.lastActionId)).data; }
   function workPaired(id) { let a=workLog(id);return a.actor==request.auth.uid && a.actorName==profile().username && a.at==request.time && a.revision==workAfter(id).revision; }
   function workFields(d) {
-   return d.title is string && d.title.size()>0 && d.title.size()<=120
+   return (!('category' in d) || (d.category is string && (d.category in ['店務','工務','IT','行銷','其它'] || exists(/databases/$(database)/documents/workCategories/$(d.category)))))
+    && d.title is string && d.title.size()>0 && d.title.size()<=120
     && d.description is string && d.description.size()<=5000
     && d.assignee is string && d.assignee.size()<=80
     && (!('directAssigneeIds' in d) || (d.directAssigneeIds is list && d.directAssigneeIds.size()<=100 && d.directAssigneeIds.toSet().size()==d.directAssigneeIds.size()))
@@ -638,7 +650,7 @@ service cloud.firestore {
    function localVersion() { return getAfter(/databases/$(database)/documents/workTasks/$(id)/versions/$(request.resource.data.lastActionId)).data; }
    function localPaired() { let a=localLog();return a.actor==request.auth.uid && a.actorName==profile().username && a.at==request.time && a.revision==request.resource.data.revision; }
    function validRoot(d) {
-    return d.keys().hasOnly(['title','description','assignee','directAssigneeIds','due','priority','done','deleted','completedBy','completedName','completedAt','branchIds','branchNames','mode','childCount','openChildren','revision','createdBy','createdName','createdAt','updatedAt','lastActionId','signals'])
+    return d.keys().hasOnly(['category','title','description','assignee','directAssigneeIds','due','priority','done','deleted','completedBy','completedName','completedAt','branchIds','branchNames','mode','childCount','openChildren','revision','createdBy','createdName','createdAt','updatedAt','lastActionId','signals','purging'])
      && workFields(d) && d.branchIds is list && d.branchIds.size()>0 && d.branchIds.size()<=100
      && d.branchIds.toSet().size()==d.branchIds.size() && d.branchNames is map && d.branchNames.keys().hasOnly(d.branchIds) && d.branchNames.keys().hasAll(d.branchIds)
      && d.mode in ['single','shared'] && (d.mode=='shared' || d.branchIds.size()==1)
@@ -646,7 +658,7 @@ service cloud.firestore {
      && d.openChildren is int && d.openChildren>=0 && d.openChildren<=d.childCount
      && (!d.done || d.openChildren==0) && d.revision is int && d.revision>=0 && d.lastActionId is string && d.signals is map;
    }
-   function metadataSame() { return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['title','description','assignee','directAssigneeIds','due','priority']); }
+   function metadataSame() { return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['category','title','description','assignee','directAssigneeIds','due','priority']); }
    function completionSame() { return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['done','completedBy','completedName','completedAt']); }
    function validSignal() {
     let a=localLog();let n=request.resource.data.signals;let o=resource.data.signals;
@@ -694,7 +706,7 @@ service cloud.firestore {
     );
    }
    allow read: if workScope(resource.data,id);
-   allow create: if workUser() && validRoot(request.resource.data)
+   allow create: if workUser() && request.resource.data.get('purging',false)==false && validRoot(request.resource.data)
     && (globalAccess() || profile().branchIds.hasAll(request.resource.data.branchIds))
     && request.resource.data.createdBy==request.auth.uid && request.resource.data.createdName==profile().username
     && request.resource.data.createdAt==request.time && request.resource.data.updatedAt==request.time
@@ -702,58 +714,66 @@ service cloud.firestore {
     && request.resource.data.signals=={'main': {request.auth.uid:request.time}}
     && localPaired() && localLog().action=='create' && localLog().thread=='main'
     && localVersion().before==null && localVersion().after==request.resource.data;
-   allow update: if workScope(resource.data,id) && validRoot(request.resource.data)
-    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title','description','assignee','directAssigneeIds','due','priority','done','deleted','completedBy','completedName','completedAt','childCount','openChildren','revision','updatedAt','lastActionId','signals'])
+   allow update: if resource.data.get('purging',false)==false && workScope(resource.data,id) && validRoot(request.resource.data)
+    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['category','title','description','assignee','directAssigneeIds','due','priority','done','deleted','completedBy','completedName','completedAt','childCount','openChildren','revision','updatedAt','lastActionId','signals'])
     && request.resource.data.revision==resource.data.revision+1 && request.resource.data.updatedAt==request.time
     && !exists(/databases/$(database)/documents/workTasks/$(id)/history/$(request.resource.data.lastActionId))
     && localPaired() && validSignal() && operation();
-   allow delete: if false;
+   allow update: if globalAccess() && resource.data.deleted && request.resource.data.purging==true
+    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['purging']);
+   allow delete: if workPurging(id);
    match /history/{actionId} {
-    allow read: if workScope(workRoot(id),id) && (!workRoot(id).deleted || globalAccess());
+    allow read: if workScope(workRoot(id),id) && (!workRoot(id).deleted && workRoot(id).get('purging',false)==false || globalAccess());
     allow create: if workWriteScope(id) && workAfter(id).lastActionId==actionId && workPaired(id)
      && request.resource.data.keys().hasOnly(['action','thread','actor','actorName','at','revision','targetId','done'])
      && request.resource.data.action in ['create','edit','complete','addItem','delete','restore','itemDelete','itemRestore','message','messageEdit','messageDelete']
      && request.resource.data.thread is string && request.resource.data.targetId is string
      && request.resource.data.done==(request.resource.data.action=='complete' ? workVersion(id).after.done : null)
      && existsAfter(/databases/$(database)/documents/workTasks/$(id)/versions/$(actionId));
-    allow update,delete: if false;
+    allow update: if false;
+    allow delete: if workPurging(id);
    }
    match /versions/{actionId} {
     allow read: if globalAccess();
     allow create: if workWriteScope(id) && workAfter(id).lastActionId==actionId && workPaired(id)
      && request.resource.data.keys().hasOnly(['before','after']);
-    allow update,delete: if false;
+    allow update: if false;
+    allow delete: if workPurging(id);
    }
    match /items/{itemId} {
     function pairedItem() { let a=workLog(id);return workPaired(id) && a.thread==itemId && a.targetId==itemId && workVersion(id).after==request.resource.data; }
-    function validItem(d) { return d.keys().hasOnly(['title','description','assignee','directAssigneeIds','due','priority','done','deleted','completedBy','completedName','completedAt','createdBy','createdName','createdAt']) && workFields(d); }
-    allow read: if workScope(workRoot(id),id) && (!workRoot(id).deleted || globalAccess());
-    allow create: if workScope(workRoot(id),id) && !workRoot(id).deleted && validItem(request.resource.data) && pairedItem() && workLog(id).action=='addItem'
+    function validItem(d) { return d.keys().hasOnly(['category','title','description','assignee','directAssigneeIds','due','priority','done','deleted','completedBy','completedName','completedAt','createdBy','createdName','createdAt']) && workFields(d); }
+    allow read: if workScope(workRoot(id),id) && (!workRoot(id).deleted && workRoot(id).get('purging',false)==false || globalAccess());
+    allow create: if workScope(workRoot(id),id) && !workRoot(id).deleted && workRoot(id).get('purging',false)==false && validItem(request.resource.data) && pairedItem() && workLog(id).action=='addItem'
      && workVersion(id).before==null && !request.resource.data.done && !request.resource.data.deleted
      && request.resource.data.createdBy==request.auth.uid && request.resource.data.createdName==profile().username && request.resource.data.createdAt==request.time;
-    allow update: if workScope(workRoot(id),id) && !workRoot(id).deleted && validItem(request.resource.data) && pairedItem() && workVersion(id).before==resource.data
-     && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title','description','assignee','directAssigneeIds','due','priority','done','deleted','completedBy','completedName','completedAt'])
-     && ((workLog(id).action=='edit' && !resource.data.deleted && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title','description','assignee','directAssigneeIds','due','priority']))
+    allow update: if workScope(workRoot(id),id) && !workRoot(id).deleted && workRoot(id).get('purging',false)==false && validItem(request.resource.data) && pairedItem() && workVersion(id).before==resource.data
+     && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['category','title','description','assignee','directAssigneeIds','due','priority','done','deleted','completedBy','completedName','completedAt'])
+     && ((workLog(id).action=='edit' && !resource.data.deleted && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['category','title','description','assignee','directAssigneeIds','due','priority']))
       || (workLog(id).action=='complete' && !resource.data.deleted && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['done','completedBy','completedName','completedAt'])
        && (request.resource.data.done ? request.resource.data.completedBy==request.auth.uid && request.resource.data.completedName==profile().username && request.resource.data.completedAt==request.time : true))
       || (workLog(id).action in ['itemDelete','itemRestore'] && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deleted']) && (workLog(id).action=='itemRestore' ? globalAccess() : true)));
-    allow delete: if false;
+    allow delete: if workPurging(id);
    }
    match /threads/{thread}/messages/{messageId} {
     function allowedThread() { return thread=='main' || (!get(/databases/$(database)/documents/workTasks/$(id)/items/$(thread)).data.deleted); }
     function pairedMessage() { let a=workLog(id);return workPaired(id) && a.thread==thread && a.targetId==messageId && workVersion(id).after==request.resource.data; }
     function validMessage(d) { return d.keys().hasOnly(['text','author','authorName','createdAt','edited','deleted','editedAt','deletedAt']) && d.text is string && d.text.size()<=5000 && (d.deleted || d.text.size()>0) && d.edited is bool && d.deleted is bool; }
-    allow read: if workScope(workRoot(id),id) && ((!workRoot(id).deleted && allowedThread()) || globalAccess());
-    allow create: if workScope(workRoot(id),id) && !workRoot(id).deleted && allowedThread() && pairedMessage() && validMessage(request.resource.data)
+    allow read: if workScope(workRoot(id),id) && ((!workRoot(id).deleted && workRoot(id).get('purging',false)==false && allowedThread()) || globalAccess());
+    allow create: if workScope(workRoot(id),id) && !workRoot(id).deleted && workRoot(id).get('purging',false)==false && allowedThread() && pairedMessage() && validMessage(request.resource.data)
      && workLog(id).action=='message' && workVersion(id).before==null && !request.resource.data.edited && !request.resource.data.deleted
      && request.resource.data.author==request.auth.uid && request.resource.data.authorName==profile().username && request.resource.data.createdAt==request.time
      && !('editedAt' in request.resource.data) && !('deletedAt' in request.resource.data);
-    allow update: if workScope(workRoot(id),id) && !workRoot(id).deleted && allowedThread() && pairedMessage() && validMessage(request.resource.data)
+    allow update: if workScope(workRoot(id),id) && !workRoot(id).deleted && workRoot(id).get('purging',false)==false && allowedThread() && pairedMessage() && validMessage(request.resource.data)
      && workVersion(id).before==resource.data && resource.data.author==request.auth.uid && !resource.data.deleted
      && ((workLog(id).action=='messageEdit' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text','edited','editedAt']) && request.resource.data.edited && request.resource.data.editedAt==request.time)
       || (workLog(id).action=='messageDelete' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text','deleted','deletedAt']) && request.resource.data.deleted && request.resource.data.text=='' && request.resource.data.deletedAt==request.time));
-    allow delete: if false;
+    allow delete: if workPurging(id);
    }
+  }
+  match /workTasks/{id}/threads/{thread} {
+   allow read,delete: if workPurging(id);
+   allow create,update: if false;
   }
   match /workTaskAccess/{accessId} {
    function targetIds(d) {
@@ -784,7 +804,7 @@ service cloud.firestore {
    allow get: if workUser() && (!exists(/databases/$(database)/documents/workTaskAccess/$(accessId)) || globalAccess() || resource.data.uid==request.auth.uid || workScope(workRoot(resource.data.taskId),resource.data.taskId));
    allow list: if workUser() && (globalAccess() || resource.data.uid==request.auth.uid);
    allow create,update: if workUser() && workWriteScope(request.resource.data.taskId) && validAccess();
-   allow delete: if false;
+   allow delete: if workPurging(resource.data.taskId);
   }
   match /workPeople/{uid} {
    allow read: if workUser() || (signedIn() && uid==request.auth.uid);
@@ -797,12 +817,12 @@ service cloud.firestore {
   }
   match /workReads/{receiptId} {
    allow get: if workUser() && (!exists(/databases/$(database)/documents/workReads/$(receiptId)) || resource.data.uid==request.auth.uid);
-   allow list: if workUser() && resource.data.uid==request.auth.uid;
+   allow list: if workUser() && (resource.data.uid==request.auth.uid || workPurging(resource.data.taskId));
    allow create,update: if workUser() && request.resource.data.uid==request.auth.uid
     && receiptId==request.auth.uid+'_'+request.resource.data.taskId
     && request.resource.data.keys().hasOnly(['uid','taskId','seen']) && request.resource.data.seen is map && request.resource.data.seen.size()<=101
     && workScope(workRoot(request.resource.data.taskId),request.resource.data.taskId);
-   allow delete: if false;
+   allow delete: if workPurging(resource.data.taskId);
   }
 
 
@@ -819,3 +839,5 @@ service cloud.firestore {
 // storeasy-annual-renew-backfill-v2
 
 // storeasy-work-team-v1
+
+// storeasy-work-categories-v1
