@@ -3,11 +3,14 @@ import {collection,doc,query,where,onSnapshot,runTransaction,serverTimestamp,Tim
 import {auth,db} from './firebase';
 export type WorkRow=Record<string,any>;
 export const workRoles=['admin','supervisor','manager'];
-export const isWorkQuota=(error:any):boolean=>String(error?.code||'').includes('resource-exhausted')||/quota|額度已用完/i.test(String(error?.message||error||''));
+export const isWorkQuota=(error:any):boolean=>String(error?.code||'').includes('resource-exhausted')||/resource-exhausted|quota|額度/i.test(String(error?.message||error||''));
 export function workError(error:any):string {
- if(isWorkQuota(error))return 'Firebase 額度已用完，暫時無法讀取或儲存資料。請等額度重置後重新整理再試；目前輸入的訊息尚未送出，會保留在輸入框。';
- if(String(error?.code||error?.message||'').includes('permission'))return '操作遭拒：請確認最新 Firestore 規則已發布，且你仍有此據點權限。';
- return String(error?.message||error||'操作失敗，請稍後再試');
+ if(typeof error==='string')return error;
+ const code=String(error?.code||'unknown');
+ const message=String(error?.message||'操作失敗');
+ if(isWorkQuota(error))return `Firebase 回傳額度限制（${code}）：${message}。請按「重新連線」重試。`;
+ if(code.includes('permission'))return `操作遭拒（${code}）：請確認最新 Firestore 規則已發布，且你仍有此據點權限。`;
+ return `${message}（${code}）`;
 }
 export const stamp=(v:any):number=>v?.toMillis?.()||0;
 export function unreadThreads(task:WorkRow,receipt?:WorkRow,uid=auth.currentUser?.uid){
@@ -15,6 +18,7 @@ export function unreadThreads(task:WorkRow,receipt?:WorkRow,uid=auth.currentUser
 }
 export function useWorkTasks(profile:WorkRow|null){
  const [tasks,setTasks]=useState<WorkRow[]>([]),[reads,setReads]=useState<Record<string,WorkRow>>({}),[error,setError]=useState('');
+ const [reconnect,setReconnect]=useState(0);
  const uid=auth.currentUser?.uid;
  useEffect(()=>{
   setTasks([]);setReads({});setError('');if(!uid||!profile||!workRoles.includes(profile.role))return;
@@ -24,8 +28,8 @@ export function useWorkTasks(profile:WorkRow|null){
   scopes.forEach((q,i)=>stops.push(onSnapshot(q,(s:any)=>{parts.set(i,s.docs.map((d:any)=>({id:d.id,...d.data()})));setTasks([...new Map([...parts.values()].flat().map(t=>[t.id,t])).values()]);},(e:any)=>setError(workError(e)))));
   stops.push(onSnapshot(query(collection(db,'workReads'),where('uid','==',uid)),s=>setReads(Object.fromEntries(s.docs.map(d=>[d.data().taskId,d.data()]))),e=>setError(workError(e))));
   return()=>stops.forEach(s=>s());
- },[uid,profile?.role,JSON.stringify(profile?.branchIds)]);
- return {tasks,reads,error,hasUnread:tasks.some(t=>unreadThreads(t,reads[t.id]).some(thread=>!t.deleted||thread==='main'))};
+ },[uid,profile?.role,JSON.stringify(profile?.branchIds),reconnect]);
+ return {tasks,reads,error,retry:()=>{setError('');setReconnect(n=>n+1);},hasUnread:tasks.some(t=>unreadThreads(t,reads[t.id]).some(thread=>!t.deleted||thread==='main'))};
 }
 function actor(profile:WorkRow){if(!auth.currentUser)throw new Error('請重新登入');return {uid:auth.currentUser.uid,name:profile.username||'未命名帳號'};}
 function fields(input:WorkRow){
@@ -113,3 +117,5 @@ export async function markWorkRead(task:WorkRow,thread:string){
 export async function loadWorkHistory(taskId:string){return (await getDocs(query(collection(db,'workTasks',taskId,'history'),orderBy('at','desc'),limit(100)))).docs.map(d=>({id:d.id,...d.data()}));}
 
 // storeasy-work-polish-v1
+
+// storeasy-work-reconnect-v1

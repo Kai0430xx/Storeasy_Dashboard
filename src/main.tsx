@@ -1,5 +1,5 @@
 import WorkTasks from "./WorkTasks";
-import { useWorkTasks, unreadThreads, isWorkQuota } from "./work-tasks";
+import { useWorkTasks, unreadThreads, isWorkQuota, workError } from "./work-tasks";
 import LightInsights from "./LightInsights";
 import LazyUnits from "./LazyUnits";
 import { compareBranches } from "./branch-order.js";
@@ -85,7 +85,7 @@ const types: Row = {
 };
 
 const friendly = (error: any) => {
-  if (isWorkQuota(error)) return "Firebase 額度已用完，暫時無法讀取或儲存資料。請等額度重置後再試。";
+  if (isWorkQuota(error)) return workError(error);
   const code = error?.code || "";
   if (/invalid-credential|user-not-found|wrong-password/.test(code))
     return "帳號或密碼不正確";
@@ -2705,3 +2705,5 @@ createRoot(
 // storeasy-text-work-v1
 
 // storeasy-work-polish-v1
+
+// storeasy-work-reconnect-v1
