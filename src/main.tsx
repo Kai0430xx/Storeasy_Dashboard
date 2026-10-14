@@ -1,3 +1,5 @@
+import WorkTasks from "./WorkTasks";
+import { useWorkTasks, unreadThreads } from "./work-tasks";
 import LightInsights from "./LightInsights";
 import LazyUnits from "./LazyUnits";
 import { compareBranches } from "./branch-order.js";
@@ -130,6 +132,7 @@ function App() {
 
   const [loadAllUnits,setLoadAllUnits]=useState(false);
   const branches = [...branchRows].sort(compareBranches);
+  const work = useWorkTasks(profile);
   const global =
     profile && ["admin", "supervisor"].includes(profile.role);
   const canWrite =
@@ -238,7 +241,7 @@ function App() {
   useEffect(() => {
     setData({});
     const stops: (() => void)[] = [];
-    if (page === "users") return;
+    if (page === "users" || page === "work") return;
 
     for (const branch of branches.filter(
       (item) =>
@@ -466,6 +469,7 @@ function App() {
     ["activities", "活動優惠", Tags],
     ["imports", "資料匯入", Upload],
     ["targets", "目標與轉介", LayoutDashboard],
+    ...(canWrite ? [["work", "待辦事項", Check]] : []),
     ...(global ? [["users", "帳號與權限", Users]] : []),
   ];
 
@@ -497,6 +501,7 @@ function App() {
             >
               <Icon size={19} />
               {label}
+              {id === "work" && work.hasUnread && <i className="dot" aria-label="待辦事項有未讀變動" />}
               {id === "users" &&
                 users.some((item) => item.role === "pending") &&
                 <i className="dot" />}
@@ -628,7 +633,7 @@ function App() {
                           ? "各據點專屬優惠，使用成效一次掌握。"
                           : page === "imports"
                             ? "從 Excel 匯入倉位現況與歷史月度統計。"
-                            : page === "targets" ? "追蹤目標達成、年度差距及各月轉介紀錄。" : "管理註冊申請、角色與據點存取權限。"}
+                            : page === "work" ? "追蹤據點待辦、子項目與討論。紅點代表其他人的未讀變動。" : page === "targets" ? "追蹤目標達成、年度差距及各月轉介紀錄。" : "管理註冊申請、角色與據點存取權限。"}
                   </p>
                 </div>
 
@@ -649,11 +654,12 @@ function App() {
                             key={branch.id}
                             value={branch.id}
                           >
-                            {branch.name}
+                            {branch.name}{page === "work" && work.tasks.some(t=>t.branchIds.includes(branch.id) && unreadThreads(t,work.reads[t.id]).some(thread=>!t.deleted||thread==="main")) ? "（有未讀）" : ""}
                           </option>
                         ))}
                     </select>
 
+                    {page !== "work" && (
                     <input
                       aria-label="統計月份"
                       type="month"
@@ -666,6 +672,7 @@ function App() {
                         )
                       }
                     />
+                    )}
                   </div>
                 )}
               </div>
@@ -1008,6 +1015,7 @@ function App() {
                 />
                 <LightInsights branches={visible} events={events} month={month} />
               </>}
+              {page === "work" && canWrite && <WorkTasks profile={profile} branches={branches.filter(b=>!b.archived)} branchId={branchId} {...work} />}
               {page === "targets" && <Targets
                 branches={branches.filter(b=>!b.archived && (branchId === "all" || b.id === branchId))}
                 month={month}
@@ -2692,3 +2700,5 @@ createRoot(
 // storeasy-opening-month-v1
 
 // storeasy-annual-renew-backfill-v2
+
+// storeasy-text-work-v1
