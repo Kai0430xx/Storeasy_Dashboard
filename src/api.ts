@@ -1,3 +1,4 @@
+import {recordTransfer,undoTransfer} from "./transfers";
 import {validateRenewCounts} from './renewal-kpi.js';
 import { exitCategories, vacancyDate } from "./targets.js";
 import { deleteUserAccount } from "./delete-user";
@@ -25,7 +26,7 @@ import {
 import {
   doc,
   collection,
-  getDocs,
+  getDoc, getDocs,
   runTransaction,
   writeBatch,
   serverTimestamp,
@@ -258,6 +259,8 @@ export async function execute(
       return {};
     }
 
+    case "recordTransfer": return recordTransfer(data);
+    case "undoTransfer": return undoTransfer(data);
     case "recordEvent": {
       const {
         branchId,
@@ -528,6 +531,8 @@ export async function execute(
     }
 
     case "voidEvent": {
+      const check=await getDoc(doc(db,"branches",data.branchId,"events",data.eventId));
+      if(["transferOut","transferIn"].includes(check.data()?.type))return undoTransfer(data);
       const b = branch(data.branchId),
         e = doc(db, "branches", data.branchId, "events", data.eventId);
 
@@ -1236,3 +1241,5 @@ export async function execute(
 // storeasy-annual-renew-backfill-v2
 
 // storeasy-work-team-v1
+
+// storeasy-transfers-v1

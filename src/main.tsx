@@ -1,3 +1,4 @@
+import TransferForm from "./TransferForm";
 import WorkTasks from "./WorkTasks";
 import { useWorkTasks, unreadThreads, isWorkQuota, workError } from "./work-tasks";
 import LightInsights from "./LightInsights";
@@ -78,11 +79,7 @@ const roles: Row = {
   pending: "待指派",
 };
 
-const types: Row = {
-  new: "新承租",
-  renew: "續約",
-  exit: "退租",
-};
+const types: Row = { new:"新承租",renew:"續約",exit:"退租",transferOut:"轉出",transferIn:"轉入" };
 
 const friendly = (error: any) => {
   if (isWorkQuota(error)) return workError(error);
@@ -1134,44 +1131,7 @@ function App() {
                                 {canWrite && (
                                   <td>
                                     <div className="row-actions">
-                                      {!unit.missing && (
-                                        <>
-                                          <button
-                                            className="text-button"
-                                            onClick={() => {
-                                              setMonth(today().slice(0, 7));
-                                              setModal({
-                                                kind: "event",
-                                                unit,
-                                                type:
-                                                  unit.status === "vacant"
-                                                    ? "new"
-                                                    : "exit",
-                                              });
-                                            }}
-                                          >
-                                            {unit.status === "vacant"
-                                              ? "承租"
-                                              : "退租"}
-                                          </button>
-
-                                          {unit.status === "rented" && (
-                                            <button
-                                              className="text-button"
-                                              onClick={() => {
-                                                setMonth(today().slice(0, 7));
-                                                setModal({
-                                                  kind: "event",
-                                                  unit,
-                                                  type: "renew",
-                                                });
-                                              }}
-                                            >
-                                              續約
-                                            </button>
-                                          )}
-                                        </>
-                                      )}
+                                      {!unit.missing && (unit.status==='rented'?['renew','exit','transferOut']:['new','transferIn']).map(type=><button className="text-button" key={type} onClick={()=>{setMonth(today().slice(0,7));setModal({kind:type.startsWith('transfer')?'transfer':'event',unit:unit,type});}}>{type==='new'?'承租':types[type]}</button>)}
 
                                       <button
                                         className="text-button"
@@ -1655,7 +1615,7 @@ function App() {
                 {({
                   password: "更改密碼",
                   branch: "據點資料",
-                  event: `登記${types[modal.type]}`,
+                  event: `登記${types[modal.type]}`,transfer: `登記${types[modal.type]}`,
                   activity: "活動設定",
                       activityUsage: "活動使用明細",
                   rentalDetails: "承租動態明細",
@@ -1778,6 +1738,7 @@ function App() {
             {modal.kind === "activityUsage" && (
               <LazyUnits events={events.filter(e=>e.activities?.some((a:Row)=>a.id===modal.activity.id))} units={units}>{loaded=><ActivityUsage activity={modal.activity} month={modal.month} events={events} units={loaded} />}</LazyUnits>
             )}
+            {modal.kind === "transfer" && <TransferForm unit={modal.unit} type={modal.type} units={units} busy={busy} onDateChange={setMonth} onSave={(data:Row)=>run(()=>call("recordTransfer",data),"轉倉已儲存，不計入新承租或退租")} />}
             {modal.kind === "event" && (
               <form
                 onSubmit={(event) => {
@@ -2194,7 +2155,7 @@ function App() {
               <>
                 <p>
                   撤銷 {modal.event.code} 在 {modal.event.date} 的{types[modal.event.type]}？
-                  {profile?.role === "admin"
+                  {modal.event.type.startsWith("transfer")?"轉倉只能撤銷最後一筆；同店轉倉會一併還原原倉與目的倉，兩間都不能有後續異動。":profile?.role === "admin"
                     ? "管理員可以撤銷任一筆紀錄。較早紀錄只作廢並扣除可對應的即時異動筆數，保留目前倉位現況及後續租期；最後一筆在資料可安全回復時會回復前一狀態。匯入 KPI 彙總不會自動修改。"
                     : "只能撤銷該倉位最後一筆異動，並回復前一狀態。"}
                 </p>
@@ -2203,7 +2164,7 @@ function App() {
                   disabled={busy}
                   onClick={() =>
                     run(
-                      () => call("voidEvent", {
+                      () => call(modal.event.type.startsWith("transfer")?"undoTransfer":"voidEvent", {
                         branchId: modal.event.branchId,
                         eventId: modal.event.id,
                       }),
@@ -2709,3 +2670,5 @@ createRoot(
 // storeasy-work-reconnect-v1
 
 // storeasy-work-team-v1
+
+// storeasy-transfers-v1
