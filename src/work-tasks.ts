@@ -26,6 +26,7 @@ export function useWorkTasks(profile:WorkRow|null){
   if(['admin','supervisor'].includes(profile.role))scopes.push(collection(db,'workTasks'));
   else for(let i=0;i<(profile.branchIds||[]).length;i+=30)scopes.push(query(collection(db,'workTasks'),where('branchIds','array-contains-any',profile.branchIds.slice(i,i+30))));
 
+  if(profile.role==='manager')scopes.push(query(collection(db,'workTasks'),where('createdBy','==',uid)));
   scopes.forEach((q,i)=>stops.push(onSnapshot(q,(s:any)=>{parts.set(i,s.docs.map((d:any)=>({id:d.id,...d.data()})));setTasks([...new Map([...parts.values()].flat().concat([...((parts as any).assigned?.values()||[])]).map(t=>[t.id,t])).values()]);},(e:any)=>setError(workError(e)))));
   if(profile.role==='manager'){
    const assigned=new Map<string,WorkRow>(),watchers=new Map<string,()=>void>();

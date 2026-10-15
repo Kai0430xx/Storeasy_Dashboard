@@ -715,7 +715,7 @@ service cloud.firestore {
        && request.auth.uid in get(/databases/$(database)/documents/workTasks/$(id)/items/$(get(path).data.primaryThread)).data.get('directAssigneeIds',[]));
   }
   function workScope(d,id) {
-   return workUser() && (globalAccess() || d.branchIds.hasAny(profile().branchIds) || workAssigned(d,id));
+   return workUser() && (globalAccess() || d.createdBy==request.auth.uid || d.branchIds.hasAny(profile().branchIds) || workAssigned(d,id));
   }
   function workWriteScope(id) {
    return workScope(workAfter(id),id) || (exists(/databases/$(database)/documents/workTasks/$(id)) && workScope(workRoot(id),id));
@@ -798,7 +798,6 @@ service cloud.firestore {
    }
    allow read: if workScope(resource.data,id);
    allow create: if workUser() && request.resource.data.get('purging',false)==false && validRoot(request.resource.data)
-    && (globalAccess() || profile().branchIds.hasAll(request.resource.data.branchIds))
     && request.resource.data.createdBy==request.auth.uid && request.resource.data.createdName==profile().username
     && request.resource.data.createdAt==request.time && request.resource.data.updatedAt==request.time
     && request.resource.data.revision==0 && request.resource.data.childCount==0 && request.resource.data.openChildren==0 && !request.resource.data.done && !request.resource.data.deleted
@@ -897,7 +896,18 @@ service cloud.firestore {
    allow create,update: if workUser() && workWriteScope(request.resource.data.taskId) && validAccess();
    allow delete: if workPurging(resource.data.taskId);
   }
-  match /workPeople/{uid} {
+  
+// storeasy-work-branches-v1
+match /workBranches/{id} {
+ allow read: if workUser();
+ allow create,update: if workUser() && branchAccess(id)
+  && request.resource.data.keys().hasOnly(['name','archived'])
+  && request.resource.data.name==getAfter(/databases/$(database)/documents/branches/$(id)).data.name
+  && request.resource.data.archived==getAfter(/databases/$(database)/documents/branches/$(id)).data.get('archived',false);
+ allow delete: if false;
+}
+match /workPeople/{uid} {
+
    allow read: if workUser() || (signedIn() && uid==request.auth.uid);
    allow create,update: if signedIn() && (globalAccess() || uid==request.auth.uid)
     && request.resource.data.keys().hasOnly(['username'])
