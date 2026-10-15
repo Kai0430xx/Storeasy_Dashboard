@@ -27,7 +27,7 @@ jobs:
           node-version: '22'
 
       - name: Apply dashboard features
-        run: python3 scripts/update-pending-renewals.py
+        run: python3 scripts/fix-inventory-signature.py
 
       - name: Install dependencies
         run: |
