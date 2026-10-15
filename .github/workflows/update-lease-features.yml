@@ -27,7 +27,7 @@ jobs:
           node-version: '22'
 
       - name: Apply dashboard features
-        run: python3 scripts/update-cross-branch-tasks.py
+        run: python3 scripts/add-pending-renewal-delete.py
 
       - name: Install dependencies
         run: |
