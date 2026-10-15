@@ -621,3 +621,33 @@ button.flow-row:hover { background:#f4f7fb; }
     max-width: 100%;
   }
 }
+
+/* activity-card-labels-v1 */
+.activity-card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.activity-card-heading .tag-icon {
+  margin: 0;
+  flex: 0 0 auto;
+}
+.activity-card-tags {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+}
+.activity-card-tags > .badge {
+  position: static;
+  display: inline-block;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}

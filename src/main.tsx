@@ -1285,13 +1285,11 @@ function App() {
                           className="panel activity-card"
                           key={activity.branchId + activity.id}
                         >
-                          <span className="tag-icon">
+                          <div className="activity-card-heading"><span className="tag-icon">
                             <Tags size={22} />
-                          </span>
-                          <span className="badge blue">
+                          </span><div className="activity-card-tags"><span className="badge blue">
                             {activity.branchName}
-                          </span>
-                          <span className="badge">{activity.category||"未分類"}</span><h2>{activity.name}</h2>
+                          </span><span className="badge">{activity.category||"未分類"}</span></div></div><h2>{activity.name}</h2>
                           <p>
                             {activity.description || "未填寫活動說明"}
                           </p>
