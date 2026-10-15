@@ -1,5 +1,5 @@
 import {registerUnpaidRenewal} from "./manual-pending-renewal";
-import {savePendingUnit,confirmRenewalPayment,undoRenewalPayment} from "./pending-renewals";
+import {deletePendingRenewal,savePendingUnit,confirmRenewalPayment,undoRenewalPayment} from "./pending-renewals";
 import {reviewInventory} from "./review-inventory";
 import {recordTransfer,undoTransfer} from "./transfers";
 import {validateRenewCounts} from './renewal-kpi.js';
@@ -817,6 +817,7 @@ export async function execute(
     case "removeImport": {
       return removeImport(data);
     }
+    case "deletePendingRenewal": return deletePendingRenewal(data);
     case "confirmRenewalPayment": return confirmRenewalPayment(data);
     case "reviewInventory": return reviewInventory(data);
     case "importInventory": {

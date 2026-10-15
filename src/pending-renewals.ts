@@ -253,3 +253,31 @@ export async function undoRenewalPayment(data:any){
  });
  return {};
 }
+
+export async function deletePendingRenewal(data:any){
+ const uid=auth.currentUser?.uid;
+ if(!uid)throw new Error('請先登入');
+
+ const b=doc(db,'branches',data.branchId);
+ const p=doc(b,'pendingRenewals',data.pendingId);
+
+ await runTransaction(db,async tx=>{
+  const [bs,ps]=await Promise.all([tx.get(b),tx.get(p)]);
+
+  if(!bs.exists()||bs.data().importing)
+   throw new Error('據點不存在或正在匯入，請稍後再試');
+
+  if(!ps.exists())return;
+
+  if(ps.data().status!=='pending')
+   throw new Error('此筆已確認收款，請重新整理；如需更正收款請從異動紀錄撤銷');
+
+  tx.delete(p);
+  tx.update(b,{
+   revision:bs.data().revision+1,
+   updatedAt:serverTimestamp()
+  });
+ });
+
+ return {};
+}

@@ -68,6 +68,23 @@ function Payment({row,busy,onSave}:any){
    style={{marginLeft:12}}
    onClick={()=>setOpen(v=>!v)}
   >確認收款</button>
+  <button
+   type="button"
+   className="text-button danger"
+   disabled={busy}
+   style={{marginLeft:12}}
+   onClick={()=>{
+    if(!window.confirm(`確定刪除 ${row.code} 的這筆待收款？
+只移除待收款紀錄，保留目前租期，不變更續約筆數。`))return;
+    onSave(
+     ()=>call('deletePendingRenewal',{
+      branchId:row.branchId,
+      pendingId:row.id
+     }),
+     '待收款紀錄已刪除'
+    );
+   }}
+  >刪除</button>
   {open&&<form onSubmit={e=>{
    e.preventDefault();
    const f=new FormData(e.currentTarget);

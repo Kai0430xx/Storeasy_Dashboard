@@ -360,7 +360,7 @@ service cloud.firestore {
      && (resource.data.status=='pending' && request.resource.data.status=='paid' && pairedPayment()
       || resource.data.status=='paid' && request.resource.data.status=='pending'
        && request.resource.data.eventId==null && request.resource.data.paymentMonth==null && request.resource.data.paymentDate==null && pairedUndo());
-    allow delete: if false;
+    allow delete: if branchEdit(id) && unlocked(id) && resource.data.status=='pending';
    }
    match /events/{eventId} {
     function reviewedImport() {
