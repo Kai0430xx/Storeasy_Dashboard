@@ -1,3 +1,4 @@
+import {reviewInventory} from "./review-inventory";
 import {recordTransfer,undoTransfer} from "./transfers";
 import {validateRenewCounts} from './renewal-kpi.js';
 import { exitCategories, vacancyDate } from "./targets.js";
@@ -813,6 +814,7 @@ export async function execute(
       return removeImport(data);
     }
 
+    case "reviewInventory": return reviewInventory(data);
     case "importInventory": {
       const files = sourceFiles(data, "inventory");
       const units = normalizeUnits(data.units);
@@ -1243,3 +1245,5 @@ export async function execute(
 // storeasy-work-team-v1
 
 // storeasy-transfers-v1
+
+// storeasy-inventory-review-v1

@@ -1,0 +1,23 @@
+.inventory-review .inventory-difference{border:1px solid #dce5f1;border-radius:9px;padding:14px;margin:12px 0;background:#fff}
+.inventory-review .difference-heading{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.inventory-review .difference-heading>span{font-size:12px;color:#657793;flex:1}
+.inventory-review .difference-heading label,.inventory-review .review-select-all{display:flex;flex-direction:row;gap:8px;align-items:center;margin:0}
+.inventory-review input[type=checkbox]{width:18px;height:18px;margin:0;flex:0 0 18px}
+.inventory-review .difference-heading select{width:auto;min-width:145px;margin:0}
+.inventory-review .difference-comparison{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:12px 0;padding:12px;background:#f6f8fc;border-radius:7px}
+.inventory-review .difference-comparison p{margin:6px 0;overflow-wrap:anywhere}
+.inventory-review details>summary{cursor:pointer;color:#173f75;padding:7px 0}
+.inventory-review .review-edit-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding-top:10px}
+.inventory-review .review-wide{grid-column:1/-1}
+.inventory-review .review-buttons{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:16px 0}
+.inventory-review .review-buttons button{margin:0}
+.inventory-review .review-month-batch{margin-top:18px;border:1px solid #dce5f1;border-radius:8px;padding:14px}
+.inventory-review .review-month-batch label{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.inventory-review .review-month-batch select{width:auto;margin:0}
+.inventory-review .review-change-value{display:block;overflow-wrap:anywhere;margin-top:5px}
+@media(max-width:600px){
+.inventory-review .review-edit-fields,.inventory-review .difference-comparison{grid-template-columns:1fr}
+.inventory-review .difference-heading>label:last-child{width:100%}
+}
+
+/* storeasy-inventory-review-v1 */

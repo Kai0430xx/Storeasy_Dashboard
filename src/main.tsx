@@ -1,3 +1,4 @@
+import InventoryReview from "./InventoryReview";
 import TransferForm from "./TransferForm";
 import WorkTasks from "./WorkTasks";
 import { useWorkTasks, unreadThreads, isWorkQuota, workError } from "./work-tasks";
@@ -1340,7 +1341,7 @@ function App() {
                           消失的倉位會標示保留，不直接刪除
                         </li>
                         <li>
-                          盤點不計入新承租／退租業績
+                          全部匯入覆蓋現況；僅匯入差異可逐筆確認異動與月份
                         </li>
                       </ul>
                       {canWrite ? (
@@ -1911,12 +1912,12 @@ function App() {
                 kind={modal.kind}
                 branchId={modal.branchId}
                 busy={busy}
-                units={data[modal.branchId]?.units || []}
+                units={data[modal.branchId]?.units || []} months={data[modal.branchId]?.months || []}
                 onSubmit={(payload: Row) =>
                   run(
                     () => call(
                       modal.kind === "inventory"
-                        ? "importInventory"
+                        ? payload.reviewDiff ? "reviewInventory" : "importInventory"
                         : payload.backfillOnly ? "backfillRenewals" : "importKpi",
                       {
                         branchId: modal.branchId,
@@ -2438,7 +2439,8 @@ function Login({
   );
 }
 
-function ImportForm({
+function ImportForm(props:any){return props.kind==="inventory"?<InventoryReview {...props}/>:<LegacyImportForm {...props}/>;}
+function LegacyImportForm({
   kind,
   branchId,
   busy,
@@ -2672,3 +2674,5 @@ createRoot(
 // storeasy-work-team-v1
 
 // storeasy-transfers-v1
+
+// storeasy-inventory-review-v1

@@ -323,9 +323,15 @@ service cloud.firestore {
       }
 
       match /events/{eventId} {
+    function reviewedImport() {
+     let b=get(/databases/$(database)/documents/branches/$(id)).data;
+     return 'importing' in b && b.importing.operation=='reviewInventory' && b.importing.by==request.auth.uid
+      && request.resource.data.importRun==b.importing.token;
+    }
+
     function transferValid() {
      let e=request.resource.data;
-     let before=get(/databases/$(database)/documents/branches/$(id)/units/$(e.code)).data;
+     let before=exists(/databases/$(database)/documents/branches/$(id)/units/$(e.code)) ? get(/databases/$(database)/documents/branches/$(id)/units/$(e.code)).data : {'status':'vacant'};
      let after=getAfter(/databases/$(database)/documents/branches/$(id)/units/$(e.code)).data;
      return !(e.type in ['transferOut','transferIn']) || (
       e.activities==[] && e.transferMode in ['local','external'] && e.transferGroup is string
@@ -363,8 +369,7 @@ service cloud.firestore {
         }
         allow read: if branchAccess(id);
 
-        allow create: if branchEdit(id)
-          && unlocked(id)
+        allow create: if branchEdit(id) && (unlocked(id) || reviewedImport())
           && (
             request.resource.data.type != 'exit'
             || (
@@ -867,3 +872,5 @@ service cloud.firestore {
 // storeasy-work-categories-v1
 
 // storeasy-transfers-v1
+
+// storeasy-inventory-review-v1
