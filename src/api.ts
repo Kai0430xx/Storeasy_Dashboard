@@ -1,3 +1,4 @@
+import {savePendingUnit,confirmRenewalPayment,undoRenewalPayment} from "./pending-renewals";
 import {reviewInventory} from "./review-inventory";
 import {recordTransfer,undoTransfer} from "./transfers";
 import {validateRenewCounts} from './renewal-kpi.js';
@@ -533,6 +534,7 @@ export async function execute(
 
     case "voidEvent": {
       const check=await getDoc(doc(db,"branches",data.branchId,"events",data.eventId));
+      if(check.data()?.paymentConfirmation)return undoRenewalPayment(data);
       if(["transferOut","transferIn"].includes(check.data()?.type))return undoTransfer(data);
       const b = branch(data.branchId),
         e = doc(db, "branches", data.branchId, "events", data.eventId);
@@ -684,9 +686,9 @@ export async function execute(
       return {};
     }
     case "saveUnit": {
+      if(data.markRenewalPending && !data.remove)return savePendingUnit(data);
       const unit = normalizeUnits([
-        {
-          ...data,
+          { ...data,
           price: Number(data.price || 0)
         }
       ])[0];
@@ -813,7 +815,7 @@ export async function execute(
     case "removeImport": {
       return removeImport(data);
     }
-
+    case "confirmRenewalPayment": return confirmRenewalPayment(data);
     case "reviewInventory": return reviewInventory(data);
     case "importInventory": {
       const files = sourceFiles(data, "inventory");

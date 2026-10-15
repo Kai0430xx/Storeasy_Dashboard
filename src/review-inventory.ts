@@ -1,5 +1,5 @@
-import {
- collection,doc,getDoc,getDocs,query,where,documentId,
+import {pendingRecord,renewalKey} from "./pending-renewals";
+import {collection,doc,getDoc,getDocs,query,where,documentId,
  runTransaction,serverTimestamp,deleteField
 } from 'firebase/firestore';
 import {auth,db} from './firebase';
@@ -99,9 +99,10 @@ export async function reviewInventory(data:any){
    const event=doc(branch,'events','review_'+token+'_'+encodeURIComponent(job.after.code));
 
    await runTransaction(db,async tx=>{
-    const [bs,us,ms,ns]=await Promise.all([
-     tx.get(branch),tx.get(unit),tx.get(month),tx.get(nowMonth)
-    ]);
+    const pending=doc(branch,'pendingRenewals',renewalKey(job.after));
+    const [bs,us,ms,ns,ps]=await Promise.all([
+     tx.get(branch),tx.get(unit),tx.get(month),tx.get(nowMonth),tx.get(pending)]);
+    if(job.type==='renew'&&ps.exists())throw new Error(job.after.code+'：此租期已有收款追蹤紀錄，請改選待收款續約，並至倉位管理確認收款');
     const b=bs.data(),old=us.data();
     if(!b||b.importing?.token!==token||b.importing.by!==uid)
      throw new Error('匯入鎖定已變更');
@@ -110,10 +111,8 @@ export async function reviewInventory(data:any){
      throw new Error(job.after.code+'：倉位已被修改，請重新分析');
     validateInventoryChange(old,job.after,job,taipeiDate());
 
-    const status=job.after.leasePeriod?'rented':'vacant';
-    const record=job.type!=='sync';
-    const next:any={
-     ...old,...job.after,
+    const status=job.after.leasePeriod?'rented':'vacant';const record=!['sync','renewPending'].includes(job.type);
+    const next:any={...old,...job.after,
      ...pricingUpdate(old,job.after,data.effectiveDate,null),
      status,missing:false,archived:false,
      vacantSince:vacancyDate(old,status,job.date),
@@ -137,9 +136,8 @@ export async function reviewInventory(data:any){
 
     next.reviewImport={id:token,key:jobKey(job),after:inventorySignature(next)};
     tx.set(unit,next);
-
-    if(record){
-     const price=priceSnapshot(next,job.date);
+    if(job.type==='renewPending'&&!ps.exists())tx.set(pending,pendingRecord(next,job.date,uid,files.total));
+    if(record){const price=priceSnapshot(next,job.date);
      tx.set(event,{
       code:job.after.code,type:job.type,date:job.date,month:job.month,
       activities:[],

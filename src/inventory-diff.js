@@ -73,23 +73,21 @@ export function suggestedInventoryAction(row){
  if(!row.before||row.before.missing||row.before.archived)return 'sync';
  if(row.before.status==='rented'&&row.after.status==='vacant')return 'exit';
  if(row.before.status==='vacant'&&row.after.status==='rented')return 'new';
- if(row.before.status==='rented'&&row.after.status==='rented'&&row.changed.includes('leasePeriod'))return 'renew';
+ if(row.before.status==='rented'&&row.after.status==='rented'&&row.changed.includes('leasePeriod'))return 'renewPending';
  return 'sync';
 }
-
 export function validateInventoryChange(before,after,change,today){
  const type=change.type;
- if(!['new','renew','exit','transferIn','transferOut','sync'].includes(type))
+ if(!['new','renew','renewPending','exit','transferIn','transferOut','sync'].includes(type))
   throw new Error('請選擇異動類型');
  if(!inventoryMonths(today).includes(change.month))
   throw new Error('請選擇上個月、本月或下個月');
  const oldRented=before?.status==='rented',rented=Boolean(after.leasePeriod);
  if(
-  (['new','transferIn'].includes(type)&&(oldRented||!rented))
-  ||(type==='renew'&&(!oldRented||!rented))
+  (['new','transferIn'].includes(type)&&(oldRented||!rented))||(['renew','renewPending'].includes(type)&&(!oldRented||!rented))
   ||(['exit','transferOut'].includes(type)&&(!oldRented||rented))
  )throw new Error('異動類型與原倉位、新租期不一致');
- if(type==='renew'&&parseLease(before.leasePeriod||'').leasePeriod===after.leasePeriod)
+ if(['renew','renewPending'].includes(type)&&parseLease(before.leasePeriod||'').leasePeriod===after.leasePeriod)
   throw new Error('續約的新租期必須與原租期不同');
  if(type==='exit'&&(
   !['價格','距離','不再需要','改租其它倉位/據點','服務或環境','其它'].includes(change.exitCategory)

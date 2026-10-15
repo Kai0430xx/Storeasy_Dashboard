@@ -319,10 +319,50 @@ service cloud.firestore {
 
         allow delete: if branchEdit(id)
           && unlocked(id)
-          && resource.data.status == 'vacant';
-      }
-
-      match /events/{eventId} {
+          && resource.data.status=='vacant';
+   }
+   // storeasy-pending-renewals-v1
+   function renewalDelta(month,delta,counted) {
+    let path=/databases/$(database)/documents/branches/$(id)/months/$(month);
+    let before=exists(path)?get(path).data:{};
+    let after=existsAfter(path)?getAfter(path).data:{};
+    return before.get('source','live')=='import' || !counted
+     ? after==before : after.get('renew',0)==before.get('renew',0)+delta;
+   }
+   match /pendingRenewals/{pendingId} {
+    function validPending(d) {
+     return d.keys().hasOnly(['code','leasePeriod','leaseStart','leaseEnd','status','observedDate','source','createdBy','createdAt','updatedBy','updatedAt','eventId','paymentMonth','paymentDate','unitSnapshot','reclassifiedEventId'])
+      && d.code is string && d.leasePeriod is string && d.leasePeriod.size()>0
+      && d.leaseStart is string && d.leaseEnd is string && pendingId==d.code+'_'+d.leaseStart+'_'+d.leaseEnd
+      && d.unitSnapshot.leasePeriod==d.leasePeriod && d.unitSnapshot.leaseStart==d.leaseStart && d.unitSnapshot.leaseEnd==d.leaseEnd
+      && d.status in ['pending','paid'] && d.updatedBy==request.auth.uid && d.updatedAt==request.time;
+    }
+    function pairedPayment() {
+     let d=request.resource.data;
+     let e=getAfter(/databases/$(database)/documents/branches/$(id)/events/$(d.eventId)).data;
+     return e.paymentConfirmation && !e.voided && e.pendingId==pendingId && e.code==d.code
+      && e.unitSnapshot==d.unitSnapshot && e.createdBy==request.auth.uid && e.createdAt==request.time
+      && e.month==d.paymentMonth && e.date==d.paymentDate && e.kpiCounted==(getAfter(/databases/$(database)/documents/branches/$(id)/months/$(e.month)).data.get('source','live')!='import') && renewalDelta(e.month,1,e.kpiCounted);
+    }
+    function pairedUndo() {
+     let e=getAfter(/databases/$(database)/documents/branches/$(id)/events/$(resource.data.eventId)).data;
+     return e.voided && e.voidMode=='paymentPending' && e.voidedBy==request.auth.uid && e.voidedAt==request.time
+      && renewalDelta(e.month,-1,e.kpiCounted);
+    }
+    allow read: if branchAccess(id);
+    allow create: if branchEdit(id) && (unlocked(id)||ownImport(id)) && validPending(request.resource.data)
+     && request.resource.data.status=='pending' && request.resource.data.eventId==null
+     && request.resource.data.paymentDate==null && request.resource.data.paymentMonth==null
+     && request.resource.data.createdBy==request.auth.uid && request.resource.data.createdAt==request.time
+     && getAfter(/databases/$(database)/documents/branches/$(id)/units/$(request.resource.data.code)).data.leasePeriod==request.resource.data.leasePeriod;
+    allow update: if branchEdit(id) && unlocked(id) && validPending(request.resource.data)
+     && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','eventId','paymentMonth','paymentDate','updatedBy','updatedAt'])
+     && (resource.data.status=='pending' && request.resource.data.status=='paid' && pairedPayment()
+      || resource.data.status=='paid' && request.resource.data.status=='pending'
+       && request.resource.data.eventId==null && request.resource.data.paymentMonth==null && request.resource.data.paymentDate==null && pairedUndo());
+    allow delete: if false;
+   }
+   match /events/{eventId} {
     function reviewedImport() {
      let b=get(/databases/$(database)/documents/branches/$(id)).data;
      return 'importing' in b && b.importing.operation=='reviewInventory' && b.importing.by==request.auth.uid
@@ -366,10 +406,34 @@ service cloud.firestore {
             && r.by == request.auth.uid && r.at == request.time && r.token == lock.token
             && lock.operation == 'removeActivity' && lock.activityId == r.activity.id
             && activity.deleting == true && activity.archived == true && activity.updatedBy == request.auth.uid;
-        }
-        allow read: if branchAccess(id);
-
-        allow create: if branchEdit(id) && (unlocked(id) || reviewedImport())
+    }
+    function paymentCreate() {
+     let e=request.resource.data;
+     let path=/databases/$(database)/documents/branches/$(id)/pendingRenewals/$(e.pendingId);
+     let before=get(path).data;let after=getAfter(path).data;
+     return e.keys().hasOnly(['code','type','date','month','activities','unitSnapshot','priceSnapshot','previousLease','previousEventId','previousEventDate','paymentConfirmation','pendingId','kpiCounted','createdBy','createdAt','voided'])
+      && e.paymentConfirmation && e.type=='renew' && !e.voided && e.activities==[]
+      && e.createdBy==request.auth.uid && e.createdAt==request.time
+      && e.date.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}') && e.month.matches('[0-9]{4}-(0[1-9]|1[0-2])')
+      && e.code==before.code && e.unitSnapshot==before.unitSnapshot
+      && before.status=='pending' && after.status=='paid' && after.eventId==eventId
+      && after.paymentMonth==e.month && after.paymentDate==e.date
+      && e.kpiCounted==(getAfter(/databases/$(database)/documents/branches/$(id)/months/$(e.month)).data.get('source','live')!='import') && renewalDelta(e.month,1,e.kpiCounted);
+    }
+    function paymentVoid() {
+     let old=resource.data;let e=request.resource.data;
+     let p=getAfter(/databases/$(database)/documents/branches/$(id)/pendingRenewals/$(old.get('pendingId',e.get('pendingId','')))).data;
+     return old.type=='renew' && !old.voided && e.voided && e.voidMode=='paymentPending'
+      && e.diff(old).affectedKeys().hasOnly(['voided','voidMode','voidedBy','voidedAt','pendingId'])
+      && e.voidedBy==request.auth.uid && e.voidedAt==request.time
+      && p.status=='pending' && p.code==old.code && p.leasePeriod==old.unitSnapshot.leasePeriod
+      && (old.get('paymentConfirmation',false) ? p.eventId==null : p.reclassifiedEventId==eventId && p.createdAt==request.time && p.createdBy==request.auth.uid)
+      && renewalDelta(old.month,-1,old.get('kpiCounted',true));
+    }
+    allow read: if branchAccess(id);
+    allow create: if branchEdit(id) && unlocked(id) && paymentCreate();
+    allow update: if branchEdit(id) && unlocked(id) && paymentVoid();
+    allow create: if branchEdit(id) && !request.resource.data.get('paymentConfirmation',false) && (unlocked(id) || reviewedImport())
           && (
             request.resource.data.type != 'exit'
             || (
@@ -397,9 +461,8 @@ service cloud.firestore {
           && request.resource.data.voided == false
           && getAfter(
             /databases/$(database)/documents/branches/$(id)/units/$(request.resource.data.code)
-          ).data.lastEventId == eventId;
-
-        allow update: if transferUndoValid() && (((branchEdit(id)
+          ).data.lastEventId ==eventId;
+    allow update: if !resource.data.get('paymentConfirmation',false) && (transferUndoValid() && (((branchEdit(id)
           && unlocked(id)
           && !resource.data.voided
           && request.resource.data.voided
@@ -419,9 +482,8 @@ service cloud.firestore {
           && request.resource.data.voidMode == 'history'
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['voided','voidedBy','voidedAt','voidMode'])
           && request.resource.data.voidedBy == request.auth.uid
-          && request.resource.data.voidedAt == request.time));
-
-        allow delete: if false;
+          && request.resource.data.voidedAt == request.time)));
+    allow delete: if false;
       }
 
       match /activities/{activityId} {

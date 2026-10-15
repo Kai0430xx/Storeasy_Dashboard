@@ -8,9 +8,7 @@ import {exitCategories} from './targets.js';
 import './inventory-review.css';
 
 const names:any={
- sync:'資料修正／盤點（不計異動）',
- new:'承租',renew:'續約',exit:'退租',
- transferIn:'轉入',transferOut:'轉出'
+ sync:'資料修正／盤點（不計異動）',new:'承租',renew:'已收款續約',renewPending:'待收款續約（不計續約）',exit:'退租',transferIn:'轉入',transferOut:'轉出'
 };
 const display=(v:any)=>
  v==null||v===''?'—':typeof v==='boolean'?(v?'是':'否'):String(v);
@@ -116,9 +114,8 @@ export default function InventoryReview({units,busy,onSubmit,onError,months=[]}:
    {!codes.length?<p>沒有差異，無需更新倉位。</p>:<>
     <p className="hint">
      下列差異全部會匯入。勾選僅用於批次指定月份，不是排除匯入。
-     新增倉位預設盤點；已有倉位的租期、狀態變更會預設對應異動。
-    </p>
-    <label className="review-select-all">
+     新增倉位預設盤點；已出租倉位更換租期預設待收款續約，只更新租期；確認收款後才計入續約。</p>
+   <label className="review-select-all">
      <input
       type="checkbox" aria-label="全選差異月份設定"
       checked={selected.length===codes.length} disabled={busy}
@@ -200,8 +197,7 @@ export default function InventoryReview({units,busy,onSubmit,onError,months=[]}:
            });
           }}
          >
-          {(row.before?.status==='rented'
-           ?['renew','exit','transferOut','sync']
+          {(row.before?.status==='rented'?['renewPending','renew','exit','transferOut','sync']
            :['new','transferIn','sync']
           ).map(type=><option key={type} value={type}>{names[type]}</option>)}
          </select>

@@ -1,3 +1,4 @@
+import {PendingEdit,PendingRenewals,usePendingRenewals} from "./PendingRenewals";
 import InventoryReview from "./InventoryReview";
 import TransferForm from "./TransferForm";
 import WorkTasks from "./WorkTasks";
@@ -309,7 +310,7 @@ function App() {
       !branch.archived &&
       (branchId === "all" || branch.id === branchId),
   );
-
+  const pendingRenewals=usePendingRenewals(visible,page==="units"&&(branchId!=="all"||loadAllUnits),setError);
   const units: Row[] = visible.flatMap((branch) =>
     (data[branch.id]?.units || [])
       .filter((unit) => !unit.archived)
@@ -1023,7 +1024,8 @@ function App() {
               />}
               {page === "units" && (
                 <>
-      {branchId === "all" &&
+                  <PendingRenewals rows={pendingRenewals} busy={busy} onSave={run}/>
+                  {branchId === "all" &&
        branches.filter(b=>!b.archived).length > 1 &&
        !loadAllUnits && (
         <section className="panel target-panel">
@@ -1060,7 +1062,7 @@ function App() {
                       
                       <option value="unknown">租期未提供</option>
                       <option value="vacant">空倉</option>
-                      <option value="missing">清單中消失</option>
+                      <option value="missing">清單中消失</option><option value="pendingRenewal">待收款續約</option>
                     </select>
 
                     {canWrite && (
@@ -1096,9 +1098,8 @@ function App() {
                         <tbody>
                           {units
                             .filter((unit) =>
-                              (
-                                status === "all" ||
-                                (status === "missing" && unit.missing) ||
+                                (status === "all" || (status === "pendingRenewal" && pendingRenewals.some(p=>p.branchId===unit.branchId&&p.code===unit.code)) ||
+                                  (status === "missing" && unit.missing) ||
                                 (status === unit.status && !unit.missing) || status === leaseStatus(unit, currentDate).key
                               ) &&
                               `${unit.code}${unit.branchName}`
@@ -2126,10 +2127,9 @@ function App() {
                   備註
                   <textarea
                     name="note"
-                    defaultValue={modal.note}
-                  />
+                    defaultValue={modal.note} />
                 </label>
-
+                {modal.code && modal.status === "rented" && <PendingEdit unit={modal}/>}
                 <Submit busy={busy} />
 
                 {modal.code && (
@@ -2156,7 +2156,7 @@ function App() {
               <>
                 <p>
                   撤銷 {modal.event.code} 在 {modal.event.date} 的{types[modal.event.type]}？
-                  {modal.event.type.startsWith("transfer")?"轉倉只能撤銷最後一筆；同店轉倉會一併還原原倉與目的倉，兩間都不能有後續異動。":profile?.role === "admin"
+                  {modal.event.paymentConfirmation?"撤銷收款確認會恢復待收款，扣回當時計入的即時續約筆數；保留目前倉位租期，歷史 KPI 不變。":modal.event.type.startsWith("transfer")?"轉倉只能撤銷最後一筆；同店轉倉會一併還原原倉與目的倉，兩間都不能有後續異動。":profile?.role === "admin"
                     ? "管理員可以撤銷任一筆紀錄。較早紀錄只作廢並扣除可對應的即時異動筆數，保留目前倉位現況及後續租期；最後一筆在資料可安全回復時會回復前一狀態。匯入 KPI 彙總不會自動修改。"
                     : "只能撤銷該倉位最後一筆異動，並回復前一狀態。"}
                 </p>
