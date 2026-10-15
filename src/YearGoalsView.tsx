@@ -31,7 +31,7 @@ export default function YearGoalsView({branches,records,data,year}:{branches:Row
   const list:Row[]=[];
   if(r.occupancyTarget!=null)list.push({name:`出租率：${percent(r.occupancyTarget)}`,actual:percent(r.occupancy),result:r.occupancyResult});
   if(r.performanceTarget!=null)list.push({name:`業績完成率：${percent(r.performanceTarget)}`,actual:percent(r.performance),result:r.performanceResult});
-  if(r.referralTarget!=null)list.push({name:`轉介數量：${r.referralTarget}`,actual:r.referrals??'未填',result:r.referralResult});
+  if(r.referralTarget!=null)list.push({name:`轉介數量：${r.referralTarget}`,actual:r.referrals??'',result:r.referralResult});
   for(const g of r.other||[])list.push({name:`${g.name}：${g.target}`,actual:g.actual??'未填',result:g.result});
   return list.length?list:[{name:'本月未設定目標',actual:'—',result:'未設定'}];
  }
@@ -43,7 +43,7 @@ export default function YearGoalsView({branches,records,data,year}:{branches:Row
    {branches.length>1&&<label>選擇據點<select aria-label="年度目標一覽據點" value={selected} onChange={e=>setSelected(e.target.value)}><option value="">請選擇據點</option>{branches.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></label>}
    <p>依 1～12 月列出各月設定的目標；數值採 KPI 或已儲存的手動修正。「其它」採手填成果。當月所有設定的目標都達成才算達標，以紅字顯示；缺少實際數值顯示資料未齊。轉介超過 3 筆以紅字標示。</p>
    {!branch?<p>請選擇要查看的據點。</p>:!ready?<p role="status">載入年度資料中…</p>:<div className="table-wrap year-goals-table" tabIndex={0} aria-label="年度目標表格捲動區"><table aria-label="據點全年每月目標"><thead><tr><th>月份</th><th>目標內容</th><th>實際數值</th><th>是否達標</th><th>轉介數量</th></tr></thead><tbody>{rows.flatMap(r=>{const list=items(r);return list.map((item,i)=><tr key={`${r.month}-${i}`}>
-    {i===0&&<th scope="rowgroup" rowSpan={list.length}>{year}年{Number(r.month.slice(5))}月</th>}<td>{item.name}</td><td>{item.actual}</td>{i===0&&<><td rowSpan={list.length}>{status(r.overall)}</td><td rowSpan={list.length}>{r.referrals==null?'未填':r.referrals>=3?<strong className="goal-achieved">{r.referrals} 筆</strong>:`${r.referrals} 筆`}</td></>}
+    {i===0&&<th scope="rowgroup" rowSpan={list.length}>{year}年{Number(r.month.slice(5))}月</th>}<td>{item.name}</td><td>{item.actual}</td>{i===0&&<><td rowSpan={list.length}>{status(r.overall)}</td><td rowSpan={list.length}>{r.referrals==null?'':r.referrals>=3?<strong className="goal-achieved">{r.referrals} 筆</strong>:`${r.referrals} 筆`}</td></>}
    </tr>);})}</tbody></table></div>}
   </section></div>}
  </>;

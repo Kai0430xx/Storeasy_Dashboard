@@ -1090,7 +1090,7 @@ function App() {
                             <th>尺寸</th>
                             <th aria-sort={unitSort === "volume" ? "ascending" : "none"}><button className="text-button" aria-label="材積" onClick={() => setUnitSort("volume")}>材積{unitSort === "volume" ? " ↑" : ""}</button></th>
                             <th>月租</th>
-                            <th>狀態</th><th>租期</th><th>空倉起始日</th>
+                            <th>狀態</th><th>租期</th>{status === "vacant" && <th>空倉起始日</th>}
                             <th>備註</th>
                             {canWrite && <th>操作</th>}
                           </tr>
@@ -1127,7 +1127,7 @@ function App() {
                                 <td>
                                   <span className={`badge ${leaseStatus(unit, currentDate).color}`}>{leaseStatus(unit, currentDate).label}</span>
                                 </td>
-                                <td>{unit.leasePeriod || "—"}</td><td><VacancyCell unit={unit} editable={Boolean(canWrite)} /></td>
+                                <td>{unit.leasePeriod || "—"}</td>{status === "vacant" && <td><VacancyCell unit={unit} editable={Boolean(canWrite)} /></td>}
                                 <td>{unit.note || "—"}</td>
 
                                 {canWrite && (
@@ -2676,3 +2676,5 @@ createRoot(
 // storeasy-transfers-v1
 
 // storeasy-inventory-review-v1
+
+// storeasy-display-cleanup-v1

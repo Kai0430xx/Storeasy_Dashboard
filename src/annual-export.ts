@@ -31,12 +31,12 @@ export async function createAnnualWorkbook(branches:Row[],records:Row,year:strin
  const headers=['據點'];for(let i=1;i<=12;i++)headers.push(`${i}月達標結果`,`${i}月轉介數量`);
  summary.addRow(headers);
  for(const b of [...branches].sort(compareBranches)){
-  const values:any[]=[b.name];const selected=rows.filter(r=>r.branchId===b.id);for(const r of selected)values.push(r.overall,r.referrals??'未填');const row=summary.addRow(values);
+  const values:any[]=[b.name];const selected=rows.filter(r=>r.branchId===b.id);for(const r of selected)values.push(r.overall,r.referrals??'');const row=summary.addRow(values);
   selected.forEach((r,i)=>{if(r.bonus){const cell=row.getCell(i*2+3);cell.font={bold:true,color:{argb:'FFB91C1C'}};cell.note=r.bonus;}});
  }
  const details=book.addWorksheet('每月目標明細');
  details.columns=[{header:'據點',key:'name',width:20},{header:'月份',key:'month',width:13},{header:'出租率目標',key:'occupancyTarget',width:16},{header:'實際出租率',key:'occupancy',width:16},{header:'出租率結果',key:'occupancyResult',width:18},{header:'業績完成率目標',key:'performanceTarget',width:20},{header:'實際業績完成率',key:'performance',width:20},{header:'業績結果',key:'performanceResult',width:18},{header:'轉介目標',key:'referralTarget',width:14},{header:'轉介數量',key:'referrals',width:14},{header:'轉介結果',key:'referralResult',width:18},{header:'整體月目標結果',key:'overall',width:20},{header:'轉介加成提示',key:'bonus',width:26},{header:'KPI 來源檔案',key:'kpiFile',width:40}];
- for(const r of rows){const value={...r};for(const key of ['occupancyTarget','occupancy','performanceTarget','performance'])value[key]=r[key]==null?'—':r[key]/100;value.referralTarget=r.referralTarget??'未設定';value.referrals=r.referrals??'未填';const row=details.addRow(value);if(r.bonus)for(const i of [10,13])row.getCell(i).font={bold:true,color:{argb:'FFB91C1C'}};}
+ for(const r of rows){const value={...r};for(const key of ['occupancyTarget','occupancy','performanceTarget','performance'])value[key]=r[key]==null?'—':r[key]/100;value.referralTarget=r.referralTarget??'未設定';value.referrals=r.referrals??'';const row=details.addRow(value);if(r.bonus)for(const i of [10,13])row.getCell(i).font={bold:true,color:{argb:'FFB91C1C'}};}
  for(const column of [3,4,6,7])details.getColumn(column).numFmt='0.00%';
  summary.columns.forEach((c,i)=>{c.width=i===0?20:17;});
  const otherSheet=book.addWorksheet('其它目標明細');
