@@ -27,7 +27,7 @@ jobs:
           node-version: '22'
 
       - name: Apply dashboard features
-        run: python3 scripts/add-activity-categories.py
+        run: python3 scripts/fix-activity-card-labels.py
 
       - name: Install dependencies
         run: |
