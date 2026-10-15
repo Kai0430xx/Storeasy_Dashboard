@@ -27,7 +27,7 @@ jobs:
           node-version: '22'
 
       - name: Apply dashboard features
-        run: python3 scripts/update-transfers.py
+        run: python3 scripts/update-inventory-review.py
 
       - name: Install dependencies
         run: |
