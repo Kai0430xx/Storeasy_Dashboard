@@ -4,7 +4,7 @@ import {collection,doc,getDoc,getDocs,query,where,documentId,
 } from 'firebase/firestore';
 import {auth,db} from './firebase';
 import {normalizeUnits,validDate,taipeiDate,inventoryStats} from './domain.js';
-import {inventorySignature,validateInventoryChange} from './inventory-diff.js';
+import {sameInventorySignature,inventorySignature,validateInventoryChange} from './inventory-diff.js';
 import {pricingUpdate,priceSnapshot} from './pricing.js';
 import {vacancyDate} from './targets.js';
 import {sourceFiles} from './import-actions';
@@ -73,14 +73,14 @@ export async function reviewInventory(data:any){
   const done=(old:any,job:any)=>
    old?.reviewImport?.id===token
    &&old.reviewImport.key===jobKey(job)
-   &&inventorySignature(old)===old.reviewImport.after;
+   &&sameInventorySignature(old,old.reviewImport.after);
 
   for(const job of jobs){
    const old=current.get(job.after.code);
    if(old?.reviewImport?.id===token){
     if(!done(old,job))
      throw new Error(job.after.code+'：上次已匯入，內容已改變，請重新分析');
-   }else if(inventorySignature(old)!==job.signature){
+   }else if(!sameInventorySignature(old,job.signature)){
     throw new Error(job.after.code+'：分析後倉位已被修改，請重新分析');
    }
    if(!done(old,job)){
@@ -107,7 +107,7 @@ export async function reviewInventory(data:any){
     if(!b||b.importing?.token!==token||b.importing.by!==uid)
      throw new Error('匯入鎖定已變更');
     if(done(old,job))return;
-    if(inventorySignature(old)!==job.signature)
+    if(!sameInventorySignature(old,job.signature))
      throw new Error(job.after.code+'：倉位已被修改，請重新分析');
     validateInventoryChange(old,job.after,job,taipeiDate());
 

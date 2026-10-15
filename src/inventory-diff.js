@@ -25,7 +25,7 @@ function comparable(row){
 
 export function inventorySignature(row){
  if(!row)return null;
- return JSON.stringify([
+ return stableInventoryJSON([
   comparable(row),row.leaseStart||null,row.leaseEnd||null,
   row.vacantSince||null,row.lastEventId||null,
   row.lastEventDate||null,row.priceEffectiveDate||null,
@@ -97,3 +97,23 @@ export function validateInventoryChange(before,after,change,today){
 }
 
 // storeasy-inventory-review-v1
+
+
+// storeasy-inventory-signature-v2
+function canonicalInventoryValue(value){
+ if(Array.isArray(value))return value.map(canonicalInventoryValue);
+ if(value!==null&&typeof value==='object')return Object.fromEntries(
+  Object.keys(value).sort().map(key=>[key,canonicalInventoryValue(value[key])])
+ );
+ return value;
+}
+function stableInventoryJSON(value){
+ return JSON.stringify(canonicalInventoryValue(value));
+}
+export function sameInventorySignature(row,signature){
+ if(!row)return signature===null;
+ if(typeof signature!=='string')return false;
+ try{
+  return inventorySignature(row)===stableInventoryJSON(JSON.parse(signature));
+ }catch{return false;}
+}
