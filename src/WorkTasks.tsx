@@ -44,8 +44,8 @@ export default function WorkTasks({profile,branches,directoryBranches=branches,b
   return onSnapshot(query(collection(db,'workTasks',selected,'threads',thread,'messages'),orderBy('createdAt','desc'),limit(messageLimit)),s=>{setMessages(s.docs.map(d=>({id:d.id,...d.data()})).reverse());setMore(s.docs.length===messageLimit);},e=>setError(workError(e)));
  },[selected,thread,task?.deleted,Boolean(item),item?.deleted,messageLimit,reconnect]);
  const otherLatest=task?Math.max(0,...Object.entries(task.signals?.[thread]||{}).filter(([actor])=>actor!==uid).map(([,v])=>stamp(v))):0;
- useEffect(()=>{if(task&&!dialog&&document.visibilityState==='visible'&&!quotaBlocked&&item&&(!task.deleted)&&unread.includes(thread))markWorkRead(task,thread).catch(e=>setError(workError(e)));},[selected,thread,otherLatest,Boolean(dialog),inactive,quotaBlocked]);
- useEffect(()=>{const focus=()=>{if(task&&!dialog&&!quotaBlocked&&item&&(!task.deleted)&&unread.includes(thread))markWorkRead(task,thread).catch(e=>setError(workError(e)));};document.addEventListener('visibilitychange',focus);window.addEventListener('focus',focus);return()=>{document.removeEventListener('visibilitychange',focus);window.removeEventListener('focus',focus);};},[task,thread,dialog,inactive,reads,quotaBlocked]);
+ useEffect(()=>{if(task&&!dialog&&document.visibilityState==='visible'&&!quotaBlocked&&item&&(!task.purging&&(!task.deleted||global))&&unread.includes(thread))markWorkRead(task,thread).catch(e=>setError(workError(e)));},[selected,thread,otherLatest,Boolean(dialog),Boolean(item),inactive,quotaBlocked,global,task?.purging]);
+ useEffect(()=>{const focus=()=>{if(document.visibilityState==='visible'&&task&&!dialog&&!quotaBlocked&&item&&(!task.purging&&(!task.deleted||global))&&unread.includes(thread))markWorkRead(task,thread).catch(e=>setError(workError(e)));};document.addEventListener('visibilitychange',focus);window.addEventListener('focus',focus);return()=>{document.removeEventListener('visibilitychange',focus);window.removeEventListener('focus',focus);};},[task,thread,dialog,inactive,reads,quotaBlocked,global]);
  useEffect(()=>{end.current?.scrollIntoView({block:'nearest'});},[selected,thread,messages.at(-1)?.id]);
  const perform=async(fn:()=>Promise<any>,success='')=>{if(busy)return;setBusy(true);setError('');setNotice('');try{await fn();if(success)setNotice(success);}catch(e:any){setError(workError(e));}finally{setBusy(false);}};
  const action=(name:string,data:WorkRow={},target=thread)=>perform(()=>workAction(profile,selected,name,target,data));
@@ -91,3 +91,5 @@ export default function WorkTasks({profile,branches,directoryBranches=branches,b
 // storeasy-work-team-v1
 
 // storeasy-work-categories-v1
+
+// storeasy-trash-read-v1
