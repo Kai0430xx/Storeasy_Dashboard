@@ -1,3 +1,4 @@
+import {registerUnpaidRenewal} from "./manual-pending-renewal";
 import {savePendingUnit,confirmRenewalPayment,undoRenewalPayment} from "./pending-renewals";
 import {reviewInventory} from "./review-inventory";
 import {recordTransfer,undoTransfer} from "./transfers";
@@ -264,6 +265,7 @@ export async function execute(
     case "recordTransfer": return recordTransfer(data);
     case "undoTransfer": return undoTransfer(data);
     case "recordEvent": {
+      if(data.unpaid === "on")return registerUnpaidRenewal(data);
       const {
         branchId,
         code,

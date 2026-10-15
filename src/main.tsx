@@ -1754,7 +1754,7 @@ function App() {
                       date: form.get("date"),
                       activityIds: form.getAll("activity"),
                       exitReason: form.get("exitReason"), exitCategory: form.get("exitCategory"),
-                      leasePeriod: form.get("leasePeriod"),
+                      leasePeriod: form.get("leasePeriod"), unpaid: form.get("unpaid"),
                     }),
                     "倉位狀態與異動已更新",
                   );
@@ -1814,7 +1814,7 @@ function App() {
                     <small className="hint">請貼上完整起訖日期，例如 2026/10/08－2027/04/07。</small>
                   </label>
                 )}
-                {modal.type !== "exit" && (
+                {modal.type === "renew" && <label className="check-label"><input type="checkbox" name="unpaid" />未付款<small className="hint">勾選後先更新租期，列入待收款；確認收款後才計入續約。</small></label>}{modal.type !== "exit" && (
                   <fieldset>
                     <legend>使用活動（可複選）</legend>
                     {activities

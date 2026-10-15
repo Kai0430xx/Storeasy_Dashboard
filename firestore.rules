@@ -412,7 +412,7 @@ service cloud.firestore {
      let path=/databases/$(database)/documents/branches/$(id)/pendingRenewals/$(e.pendingId);
      let before=get(path).data;let after=getAfter(path).data;
      return e.keys().hasOnly(['code','type','date','month','activities','unitSnapshot','priceSnapshot','previousLease','previousEventId','previousEventDate','paymentConfirmation','pendingId','kpiCounted','createdBy','createdAt','voided'])
-      && e.paymentConfirmation && e.type=='renew' && !e.voided && e.activities==[]
+      && e.paymentConfirmation && e.type=='renew' && !e.voided && e.activities==before.unitSnapshot.get('activities',[]) && e.activities is list && e.activities.size()<=30
       && e.createdBy==request.auth.uid && e.createdAt==request.time
       && e.date.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}') && e.month.matches('[0-9]{4}-(0[1-9]|1[0-2])')
       && e.code==before.code && e.unitSnapshot==before.unitSnapshot

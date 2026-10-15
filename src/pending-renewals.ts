@@ -158,7 +158,7 @@ export async function confirmRenewalPayment(data:any){
   const counted=ms.data()?.source!=='import';
 
   t.set(e,{
-   code:r.code,type:'renew',date,month,activities:[],
+   code:r.code,type:'renew',date,month,activities:r.unitSnapshot.activities||[],
    unitSnapshot:r.unitSnapshot,
    priceSnapshot:{price:r.unitSnapshot.price},
    previousLease:{
