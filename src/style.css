@@ -515,3 +515,109 @@ button.flow-row:hover { background:#f4f7fb; }
     width: calc(100vw - 24px);
   }
 }
+
+/* renewal-payment-layout-v1 */
+.renewal-payment-option {
+  margin: 14px 0;
+  padding: 12px 14px;
+  background: #f5f8fc;
+  border: 1px solid #e0e8f2;
+  border-radius: 10px;
+}
+.renewal-payment-option .renewal-payment-toggle {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  margin: 0;
+  width: fit-content;
+  cursor: pointer;
+}
+.renewal-payment-toggle input[type="checkbox"] {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  padding: 0;
+}
+.renewal-payment-toggle span {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  line-height: 1.5;
+}
+.renewal-payment-option .renewal-payment-help {
+  display: block;
+  margin: 7px 0 0;
+  color: #7b8ca7;
+  font-size: 12px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+/* clearable-search-v1 */
+.clearable-search {
+  position: relative;
+  min-width: 0;
+  width: 100%;
+  max-width: 245px;
+}
+.clearable-search input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding-right: 38px;
+}
+.search .clearable-search {
+  width: 245px;
+}
+.clearable-search input::-webkit-search-cancel-button,
+.clearable-search input::-webkit-search-decoration {
+  display: none;
+  -webkit-appearance: none;
+}
+.clearable-search > .search-clear {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #73849a;
+  font-size: 21px;
+  line-height: 1;
+  box-shadow: none;
+  cursor: pointer;
+}
+.clearable-search > .search-clear:hover:enabled {
+  background: #edf2f8;
+  color: #173f75;
+}
+.clearable-search > .search-clear:disabled {
+  opacity: .35;
+  cursor: default;
+}
+.clearable-search > .search-clear:focus-visible {
+  outline: 2px solid #173f75;
+  outline-offset: -2px;
+}
+.work-filters > .clearable-search {
+  flex: 0 1 240px;
+}
+@media(max-width:720px) {
+  .search .clearable-search {
+    width: 100%;
+    max-width: none;
+    flex: 1;
+  }
+  .clearable-search {
+    max-width: 100%;
+  }
+}

@@ -1,3 +1,4 @@
+import SearchInput from "./SearchInput";
 import {PendingEdit,PendingRenewals,usePendingRenewals} from "./PendingRenewals";
 import InventoryReview from "./InventoryReview";
 import TransferForm from "./TransferForm";
@@ -1039,13 +1040,12 @@ function App() {
                   <div className="toolbar">
                     <div className="search">
                       <Search size={17} />
-                      <input
-                        placeholder="搜尋倉位編號或據點"
+                      <SearchInput placeholder="搜尋倉位編號或據點"
                         value={search}
                         onChange={(event) =>
                           setSearch(event.target.value)
                         }
-                      />
+                       onClear={()=>setSearch('')}/>
                     </div>
 
                     <select
@@ -1814,7 +1814,13 @@ function App() {
                     <small className="hint">請貼上完整起訖日期，例如 2026/10/08－2027/04/07。</small>
                   </label>
                 )}
-                {modal.type === "renew" && <label className="check-label"><input type="checkbox" name="unpaid" />未付款<small className="hint">勾選後先更新租期，列入待收款；確認收款後才計入續約。</small></label>}{modal.type !== "exit" && (
+                {modal.type === "renew" && <div className="renewal-payment-option">
+ <label className="renewal-payment-toggle">
+  <input type="checkbox" name="unpaid" aria-describedby="renewal-unpaid-help" />
+  <span>未付款</span>
+ </label>
+ <p id="renewal-unpaid-help" className="renewal-payment-help">先更新租期並列入待收款，確認收款後才計入續約。</p>
+</div>}{modal.type !== "exit" && (
                   <fieldset>
                     <legend>使用活動（可複選）</legend>
                     {activities
