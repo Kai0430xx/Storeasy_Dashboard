@@ -1,3 +1,4 @@
+import {activityCategories,activityMatches} from "./activity-categories.js";
 import SearchInput from "./SearchInput";
 import {PendingEdit,PendingRenewals,usePendingRenewals} from "./PendingRenewals";
 import InventoryReview from "./InventoryReview";
@@ -134,6 +135,7 @@ function App() {
   const [loadAllUnits,setLoadAllUnits]=useState(false);
   const branches = [...branchRows].sort(compareBranches);
   const work = useWorkTasks(profile);
+  const [activityCategory,setActivityCategory]=useState("all");
   const global =
     profile && ["admin", "supervisor"].includes(profile.role);
   const canWrite =
@@ -1262,10 +1264,21 @@ function App() {
                     </p>
                   )}
 
-                  <div className="activity-grid">
+                  <div className="toolbar">
+ <label>活動分類
+  <select aria-label="活動分類篩選" value={activityCategory}
+   onChange={e=>setActivityCategory(e.target.value)}>
+   <option value="all">全部分類</option>
+   {[...activityCategories,'未分類'].map(c=>
+    <option key={c} value={c}>{c}</option>
+   )}
+  </select>
+ </label>
+</div>
+<div className="activity-grid">
                     {activities
                       .filter((activity) =>
-                        activity.month === month && !activity.archived,
+                        activity.month === month && !activity.archived && activityMatches(activity,activityCategory),
                       )
                       .map((activity) => (
                         <section
@@ -1278,7 +1291,7 @@ function App() {
                           <span className="badge blue">
                             {activity.branchName}
                           </span>
-                          <h2>{activity.name}</h2>
+                          <span className="badge">{activity.category||"未分類"}</span><h2>{activity.name}</h2>
                           <p>
                             {activity.description || "未填寫活動說明"}
                           </p>
@@ -1313,10 +1326,10 @@ function App() {
 
                   {!activities.some(
                     (activity) =>
-                      activity.month === month && !activity.archived,
+                      activity.month === month && !activity.archived && activityMatches(activity,activityCategory),
                   ) && (
                     <section className="panel">
-                      <Empty text="本月尚無活動" />
+                      <Empty text={activityCategory==="all"?"本月尚無活動":"此分類本月尚無活動"} />
                     </section>
                   )}
                 </>
@@ -1874,7 +1887,15 @@ function App() {
                     defaultValue={modal.month}
                   />
                 </label>
-                <label>
+                <label>活動分類
+ <select name="category" aria-label="活動分類"
+  required defaultValue={modal.category||''}>
+  <option value="" disabled>請選擇分類</option>
+  {activityCategories.map(c=>
+   <option key={c} value={c}>{c}</option>
+  )}
+ </select>
+</label><label>
                   活動名稱
                   <input
                     name="name"

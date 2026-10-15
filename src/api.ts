@@ -1,3 +1,4 @@
+import {activityCategories} from "./activity-categories.js";
 import {registerUnpaidRenewal} from "./manual-pending-renewal";
 import {deletePendingRenewal,savePendingUnit,confirmRenewalPayment,undoRenewalPayment} from "./pending-renewals";
 import {reviewInventory} from "./review-inventory";
@@ -214,6 +215,8 @@ export async function execute(
     }
 
     case "saveActivity": {
+      if(data.category && !activityCategories.includes(data.category))
+        throw new Error("請選擇有效的活動分類");
       const ref = data.id
         ? doc(
             db,
@@ -246,7 +249,7 @@ export async function execute(
         ref,
         {
           month: data.month,
-          name: String(data.name).trim(),
+          ...(data.category?{category:data.category}:{}),name: String(data.name).trim(),
           description: String(
             data.description || ""
           ),

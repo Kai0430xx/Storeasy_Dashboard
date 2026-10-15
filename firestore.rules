@@ -493,7 +493,7 @@ service cloud.firestore {
           && request.resource.data.month.matches(
             '[0-9]{4}-(0[1-9]|1[0-2])'
           )
-          && request.resource.data.name is string
+          && (!('category' in request.resource.data) || request.resource.data.category in ['優惠倉','單店活動','官網活動','開幕優惠'])&& request.resource.data.name is string
           && request.resource.data.name.size() > 0
           && request.resource.data.name.size() <= 100
           && request.resource.data.description is string
