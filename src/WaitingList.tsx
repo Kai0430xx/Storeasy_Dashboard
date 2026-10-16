@@ -46,7 +46,7 @@ export default function WaitingList({profile,branches,branchId,state,focus,onFoc
   <p className="waiting-reminder-legend"><span><i className="dot waiting-dot-yellow"/>新增候補或新空倉配對</span><span><i className="dot waiting-dot-red"/>需求已到期未讀</span></p>
   {unitFilter&&<div className="alert success">僅顯示符合空倉 {unitFilter[1]} 的候補<button onClick={()=>setUnitFilter(null)}>顯示全部候補</button></div>}
   <section className="panel waiting-summary"><div className="table-wrap"><table className="waiting-list-table"><thead><tr><th>登記日期</th><th>姓名</th><th>候補據點</th><th>需求材積</th><th>需求月租</th><th>需求時間</th><th>需求到期時間</th><th>合適空倉</th><th>狀態</th></tr></thead><tbody>{list.map(r=><tr key={r.id}>
-   <td data-label="登記日期">{r.date}</td><td data-label="姓名"><button className="text-button waiting-name" onClick={()=>open(r)}>{r.name}{state.notification(r)&&<i className={'dot waiting-dot-'+state.notification(r)} aria-label={state.notification(r)==='red'?'需求已到期未讀':'有新的候補或合適空倉'}/>}</button></td><td data-label="候補據點"><WaitingBranches labels={[
+   <td data-label="登記日期">{r.date}</td><td data-label="姓名"><button className="text-button waiting-name" onClick={()=>open(r)}><span>{r.name}</span>{state.notification(r)&&<i className={'dot waiting-dot-'+state.notification(r)} aria-label={state.notification(r)==='red'?'需求已到期未讀':'有新的候補或合適空倉'}/>}</button></td><td data-label="候補據點"><WaitingBranches labels={[
      ...r.branchIds.map((id:string)=>
       String(names.get(id)||'據點名稱載入中')),
      ...(r.otherBranches?['其它：'+r.otherBranches]:[])
