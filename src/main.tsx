@@ -1,3 +1,4 @@
+import RevenueComparison from "./RevenueComparison";
 import OperationManual from "./OperationManual";
 import {activityCategories,activityMatches} from "./activity-categories.js";
 import SearchInput from "./SearchInput";
@@ -753,6 +754,7 @@ function App() {
                     )}
                   </div>
 
+                  <RevenueComparison branches={visible} data={data} month={month}/>
                   <div className="dashboard-grid">
                     <section className="panel">
                       <div className="panel-heading">
