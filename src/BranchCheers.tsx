@@ -8,12 +8,14 @@ import './branch-cheers.css';
 type Row=Record<string,any>;
 
 export function CheerText({text}:{text:string}){
- return text?<><Megaphone size={23} aria-hidden="true"/><span>{text}</span></>:null;
+ return text?
+  <span className="cheer-bubble" title={text}>
+   <Megaphone size={23} aria-hidden="true"/>
+   <span>{text}</span>
+  </span>:null;
 }
 
-export function HeaderCheer({
- branchId,uid
-}:{branchId:string|null;uid:string}){
+export function HeaderCheer({branchId,uid}:{branchId:string|null;uid:string}){
  const [value,setValue]=useState({key:'',text:''});
  const key=uid+'/'+(branchId||'');
 
@@ -28,16 +30,13 @@ export function HeaderCheer({
  },[key]);
 
  const text=value.key===key?value.text:'';
-
  return <div
   className={'header-cheer'+(text?' has-text':'')}
   aria-label="據點信心喊話"
  ><CheerText text={text}/></div>;
 }
 
-export async function saveCheer(
- id:string,text:string,expected:number|null
-){
+export async function saveCheer(id:string,text:string,expected:number|null){
  const uid=auth.currentUser?.uid;
  if(!uid)throw new Error('請先登入');
 
@@ -45,7 +44,6 @@ export async function saveCheer(
  if(clean.length>200)throw new Error('信心喊話最多 200 字');
 
  const ref=doc(db,'branchCheers',id);
-
  return runTransaction(db,async tx=>{
   const old=await tx.get(ref);
   const revision=old.exists()?old.data().revision:null;
@@ -71,84 +69,118 @@ export async function saveCheer(
 
 export default function BranchCheers({branches}:{branches:Row[]}){
  const available=branches.filter(b=>!b.archived);
- const [selected,setSelected]=useState('');
- const id=available.some(b=>b.id===selected)?
-  selected:available[0]?.id||'';
+ const [selected,setSelected]=useState<string[]|null>(null);
+ const ids=(
+  selected===null?(available[0]?[available[0].id]:[]):selected
+ ).filter(id=>available.some(b=>b.id===id));
+ const selectionKey=JSON.stringify(ids);
 
  const [text,setText]=useState('');
- const [base,setBase]=useState<number|null>(null);
+ const [base,setBase]=useState<Record<string,number|null>>({});
+ const [records,setRecords]=useState<Record<string,Row>>({});
  const [ready,setReady]=useState(false);
  const [busy,setBusy]=useState(false);
  const [error,setError]=useState('');
+ const [listError,setListError]=useState('');
  const [notice,setNotice]=useState('');
  const [reload,setReload]=useState(0);
-
- 
- const [configured,setConfigured]=useState<Record<string,string>>({});
- const [configuredReady,setConfiguredReady]=useState(false);
- const [configuredError,setConfiguredError]=useState('');
+ const dirty=useRef(false);
 
  useEffect(()=>onSnapshot(
   collection(db,'branchCheers'),
-  snapshot=>{
-   setConfigured(Object.fromEntries(
-    snapshot.docs.map(d=>[d.id,d.data().text||''])
+  s=>{
+   setRecords(Object.fromEntries(
+    s.docs.map(d=>[d.id,d.data()])
    ));
-   setConfiguredReady(true);
-   setConfiguredError('');
+   setReady(true);
+   setListError('');
   },
   e=>{
-   setConfiguredError(e.message);
-   setConfiguredReady(false);
+   setListError(e.message);
+   setReady(false);
   }
- ),[]);
-
- const configuredBranches=available.filter(
-  b=>configured[b.id]?.trim()
- );
-const dirty=useRef(false);
- const generation=useRef(0);
+ ),[reload]);
 
  useEffect(()=>{
-  const token=++generation.current;
-  dirty.current=false;
-  setText('');
-  setBase(null);
-  setReady(false);
+  if(!ready||dirty.current)return;
+  if(ids.length===1)setText(records[ids[0]]?.text||'');
+  setBase(Object.fromEntries(
+   ids.map(id=>[id,records[id]?.revision??null])
+  ));
+ },[ready,records,selectionKey,reload]);
+
+ const configuredBranches=available.filter(
+  b=>records[b.id]?.text?.trim()
+ );
+
+ function choose(next:string[]){
+  if(busy)return;
+  setBase(old=>Object.fromEntries(next.map(id=>[
+   id,
+   Object.hasOwn(old,id)?old[id]:records[id]?.revision??null
+  ])));
+  if(next.length>1)dirty.current=true;
+  setSelected(next);
   setError('');
   setNotice('');
+ }
 
-  if(!id)return;
+ function edit(id:string){
+  if(busy)return;
+  if(dirty.current&&!window.confirm(
+   '尚有未儲存的文字，確定切換據點？'
+  ))return;
 
-  return onSnapshot(doc(db,'branchCheers',id),s=>{
-   if(token!==generation.current)return;
-   if(!dirty.current){
-    setText(s.data()?.text||'');
-    setBase(s.exists()?s.data().revision:null);
-   }
-   setReady(true);
-  },e=>{
-   setError(e.message);
-   setReady(false);
-  });
- },[id,reload]);
+  dirty.current=false;
+  setSelected([id]);
+  setText(records[id]?.text||'');
+  setBase({[id]:records[id]?.revision??null});
+  setError('');
+  setNotice('');
+  setReload(n=>n+1);
+  window.scrollTo({top:0,behavior:'smooth'});
+ }
 
  async function save(value=text){
-  if(!id||!ready||busy)return;
+  if(!ids.length||!ready||busy)return;
+  const clean=value.trim();
   setBusy(true);
   setError('');
   setNotice('');
-  const token=generation.current;
+
+  const done:Record<string,number|null>={};
+  const failed:string[]=[];
 
   try{
-   const revision=await saveCheer(id,value,base);
-   if(token!==generation.current)return;
-   dirty.current=false;
-   setText(value.trim());
-   setBase(revision);
-   setNotice(value.trim()?'信心喊話已儲存':'信心喊話已清除');
-  }catch(e:any){
-   if(token===generation.current)setError(e.message);
+   for(let offset=0;offset<ids.length;offset+=4){
+    await Promise.all(ids.slice(offset,offset+4).map(async id=>{
+     try{
+      done[id]=await saveCheer(id,clean,base[id]??null);
+     }catch(e:any){
+      failed.push(
+       (available.find(b=>b.id===id)?.name||id)+'：'+e.message
+      );
+     }
+    }));
+   }
+
+   setBase(old=>({...old,...done}));
+   setText(clean);
+   const count=Object.keys(done).length;
+
+   if(failed.length){
+    dirty.current=true;
+    setError(
+     '已完成 '+count+' 間，其餘 '+failed.length+
+     ' 間未更新。'+failed.join('；')
+    );
+   }else{
+    dirty.current=false;
+    setNotice(clean?
+     '信心喊話已儲存，共 '+count+' 間':
+     '信心喊話已清除，共 '+count+' 間'
+    );
+   }
   }finally{
    setBusy(false);
   }
@@ -156,29 +188,49 @@ const dirty=useRef(false);
 
  return <section className="panel cheer-editor">
   <p className="hint">
-   選擇據點後設定文字，會顯示在該據點所有分頁最上方。
+   選擇一間或多間據點，將同一段文字套用到各店所有分頁最上方。
    未設定時不顯示文字或大聲公。
   </p>
 
   {!available.length?<p>目前沒有可設定的據點。</p>:<>
-   <label>
-    設定據點
-    <select
-     aria-label="信心喊話設定據點"
-     value={id}
-     disabled={busy}
-     onChange={e=>{
-      if(dirty.current&&!window.confirm(
-       '尚有未儲存的文字，確定切換據點？'
-      ))return;
-      setSelected(e.target.value);
-     }}
-    >
-     {available.map(b=>
-      <option key={b.id} value={b.id}>{b.name}</option>
-     )}
-    </select>
-   </label>
+   <div className="cheer-target-select">
+    <span id="cheer-target-label">設定據點</span>
+    <details className="cheer-target-picker">
+     <summary aria-labelledby="cheer-target-label">
+      {ids.length===1?
+       available.find(b=>b.id===ids[0])?.name:
+       ids.length?'已選 '+ids.length+' 間據點':'請選擇據點'}
+     </summary>
+
+     <fieldset disabled={!ready||busy}>
+      <legend className="sr-only">設定據點（可複選）</legend>
+      <div className="cheer-target-tools">
+       <button type="button" className="text-button"
+        onClick={()=>choose(available.map(b=>b.id))}>全選</button>
+       <button type="button" className="text-button"
+        onClick={()=>choose([])}>取消全選</button>
+       <span>已選 {ids.length} 間</span>
+      </div>
+
+      <div className="cheer-target-options">
+       {available.map(b=>
+        <label key={b.id}>
+         <input
+          type="checkbox"
+          aria-label={'設定喊話據點 '+b.name}
+          checked={ids.includes(b.id)}
+          onChange={e=>choose(
+           e.target.checked?
+            [...ids,b.id]:ids.filter(id=>id!==b.id)
+          )}
+         />
+         <span>{b.name}</span>
+        </label>
+       )}
+      </div>
+     </fieldset>
+    </details>
+   </div>
 
    <form onSubmit={e=>{
     e.preventDefault();
@@ -202,10 +254,10 @@ const dirty=useRef(false);
     </label>
 
     <p className="hint">
-     {text.length}／200 字；留空儲存即可移除顯示。
+     {text.length}／200 字；已選 {ids.length} 間。
+     儲存會覆蓋已選據點的喊話；留空儲存即可移除。
     </p>
 
-    
     <div className="cheer-preview-block">
      <h3>頁面頂端預覽</h3>
      <div
@@ -221,13 +273,17 @@ const dirty=useRef(false);
      </div>
     </div>
 
-    {error&&
+    {(error||listError)&&
      <p role="alert" className="alert error">
-      {error}
+      {error||listError}
       <button type="button" disabled={busy} onClick={()=>{
-       if(!dirty.current||window.confirm(
+       if(dirty.current&&!window.confirm(
         '重新載入將捨棄尚未儲存的文字，確定繼續？'
-       ))setReload(n=>n+1);
+       ))return;
+       dirty.current=false;
+       if(ids.length!==1)setText('');
+       setError('');
+       setReload(n=>n+1);
       }}>重新載入</button>
      </p>
     }
@@ -237,32 +293,29 @@ const dirty=useRef(false);
     }
 
     <div className="cheer-actions">
-     <button type="submit" className="primary" disabled={!ready||busy}>
+     <button type="submit" className="primary"
+      disabled={!ready||busy||!ids.length}>
       {busy?'儲存中…':'儲存'}
      </button>
-     <button
-      type="button"
-      className="secondary"
-      disabled={!ready||busy||(!text&&base===null)}
+     <button type="button" className="secondary"
+      disabled={!ready||busy||!ids.length}
       onClick={()=>{
-       if(window.confirm('確定清除此據點的信心喊話？'))
-        void save('');
-      }}
-     >清除喊話</button>
+       if(window.confirm(
+        '確定清除已選 '+ids.length+' 間據點的信心喊話？'
+       ))void save('');
+      }}>清除喊話</button>
     </div>
    </form>
 
    <section className="cheer-configured" aria-label="已設定的據點">
     <h3>
      已設定的據點
-     {configuredReady&&<span> {configuredBranches.length} 間</span>}
+     {ready&&<span> {configuredBranches.length} 間</span>}
     </h3>
 
-    {configuredError?
-     <p role="alert" className="alert error">
-      無法載入已設定清單：{configuredError}
-     </p>:
-     !configuredReady?<p>載入中…</p>:
+    {listError?
+     <p role="alert">無法載入已設定清單：{listError}</p>:
+     !ready?<p>載入中…</p>:
      !configuredBranches.length?
       <p className="hint">目前沒有已設定喊話的據點。</p>:
       <div className="cheer-configured-grid">
@@ -275,16 +328,10 @@ const dirty=useRef(false);
            className="text-button"
            aria-label={'編輯 '+b.name+' 信心喊話'}
            disabled={busy}
-           onClick={()=>{
-            if(b.id!==id&&dirty.current&&!window.confirm(
-             '尚有未儲存的文字，確定切換據點？'
-            ))return;
-            setSelected(b.id);
-            window.scrollTo({top:0,behavior:'smooth'});
-           }}
+           onClick={()=>edit(b.id)}
           >編輯</button>
          </div>
-         <p>{configured[b.id]}</p>
+         <p>{records[b.id].text}</p>
         </article>
        )}
       </div>
