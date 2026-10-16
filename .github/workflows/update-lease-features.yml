@@ -27,7 +27,7 @@ jobs:
           node-version: '22'
 
       - name: Apply dashboard features
-        run: python3 scripts/update-modal-headers-and-activity-category.py
+        run: python3 scripts/add-operation-manual.py
 
       - name: Install dependencies
         run: |
