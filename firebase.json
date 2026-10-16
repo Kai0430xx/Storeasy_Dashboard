@@ -42,6 +42,24 @@
     "ui": {
       "enabled": false
     },
-    "singleProjectMode": true
-  }
+    "singleProjectMode": true,
+    "functions": {
+      "port": 5001
+    }
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "notifications",
+      "ignore": [
+        "node_modules",
+        ".secret.local",
+        "*.log",
+        "test/**"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" ci --ignore-scripts"
+      ]
+    }
+  ]
 }

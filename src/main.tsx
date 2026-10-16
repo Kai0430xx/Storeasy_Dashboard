@@ -1,3 +1,5 @@
+import NotificationCenter from "./NotificationCenter";
+import {logoutNotifications} from "./push-client";
 import BranchCheers,{HeaderCheer} from "./BranchCheers";
 import {Megaphone} from "lucide-react";
 import {usePageNavigation} from "./page-navigation";
@@ -615,7 +617,7 @@ function App() {
               {roles[profile?.role] || "註冊未完成"}
             </span>
           </div>
-          <button title="登出" onClick={() => signOut(auth)}>
+          <button title="登出" onClick={() => {void logoutNotifications().finally(()=>signOut(auth));}}>
             <LogOut size={18} />
           </button>
         </div>
@@ -647,7 +649,8 @@ function App() {
            ):null
          }
         /><div className="header-right">
-            <span className="live-dot" /> 即時同步
+            {canWrite&&profile&&<NotificationCenter uid={user.uid} role={profile.role}/>}
+<span className="live-dot" /> 即時同步
             <span className="date">
               {today().replaceAll("-", " / ")}
             </span>

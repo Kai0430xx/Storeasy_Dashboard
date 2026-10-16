@@ -1,0 +1,31 @@
+
+.notification-settings-button {
+  position:relative;
+  display:inline-flex;
+  align-items:center;
+  padding:5px;
+}
+.notification-settings-button > span {
+  position:absolute;
+  top:-6px;
+  right:-7px;
+  min-width:16px;
+  padding:1px 4px;
+  border-radius:10px;
+  background:#d42036;
+  color:white;
+  font-size:10px;
+  line-height:14px;
+}
+.notification-modal p { line-height:1.7; }
+.notification-state {
+  padding:12px;
+  background:#f3f6fb;
+  border-radius:8px;
+}
+.notification-actions {
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+  margin-top:20px;
+}

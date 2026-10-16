@@ -94,6 +94,17 @@ service cloud.firestore {
     && request.resource.data.revision==resource.data.revision+1;
    allow delete: if globalAccess();
   }
+
+// background-push-v1: device registration is callable-only.
+match /pushDevices/{deviceId} {
+  allow get: if workUser() && resource.data.uid==request.auth.uid;
+  allow list,create,update,delete: if false;
+}
+match /pushStatus/{uid} {
+  allow get: if signedIn() && request.auth.uid==uid;
+  allow list,create,update,delete: if false;
+}
+
 match /users/{uid} {
       allow read: if signedIn()
         && (
