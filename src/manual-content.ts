@@ -1,3 +1,4 @@
+import {waitingManual,waitingDashboardTopics,waitingUnitTopic} from "./manual-waiting";
 export type ManualTopic={
  title:string;
  steps:string[];
@@ -420,3 +421,8 @@ export const manualPages:ManualPage[]=[
   ]
  }
 ];
+
+// waiting-list-manual-v1
+manualPages.splice(manualPages.findIndex(p=>p.id==='work'),0,waitingManual);
+manualPages.find(p=>p.id==='dashboard')?.topics.push(...waitingDashboardTopics);
+manualPages.find(p=>p.id==='units')?.topics.push(waitingUnitTopic);

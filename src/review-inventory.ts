@@ -1,6 +1,7 @@
+import {runTransaction} from "./waiting-stock";
 import {pendingRecord,renewalKey} from "./pending-renewals";
 import {collection,doc,getDoc,getDocs,query,where,documentId,
- runTransaction,serverTimestamp,deleteField
+ serverTimestamp,deleteField
 } from 'firebase/firestore';
 import {auth,db} from './firebase';
 import {normalizeUnits,validDate,taipeiDate,inventoryStats} from './domain.js';

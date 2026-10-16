@@ -1,9 +1,10 @@
+import {runTransaction,writeBatch} from "./waiting-stock";
 import {
   collection,
   doc,
   getDocs,
-  runTransaction,
-  writeBatch,
+  
+  
   serverTimestamp,
   deleteField,
 } from "firebase/firestore";
@@ -163,10 +164,10 @@ export async function removeImport(data: any) {
   );
 
   // 移出目前現況，保留價格歷史供重新匯入使用。
-  for (let index = 0; index < units.docs.length; index += 350) {
+  for (let index = 0; index < units.docs.length; index += 8) {
     const batch = writeBatch(db);
 
-    units.docs.slice(index, index + 350).forEach(
+    units.docs.slice(index, index + 8).forEach(
       snapshot => batch.update(snapshot.ref, {
         archived: true,
         missing: true,

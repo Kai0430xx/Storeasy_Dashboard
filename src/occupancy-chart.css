@@ -1,0 +1,71 @@
+.occupancy-chart-scroll {
+  overflow-x:auto;
+  padding:0 24px 18px;
+}
+.occupancy-chart {
+  display:flex;
+  gap:16px;
+  min-width:510px;
+}
+.occupancy-month {
+  flex:1;
+  text-align:center;
+  min-width:64px;
+}
+.occupancy-pair {
+  display:flex;
+  gap:5px;
+  justify-content:center;
+}
+.occupancy-series {
+  flex:1;
+  max-width:46px;
+  min-width:29px;
+}
+.occupancy-series > span {
+  display:block;
+  color:#718099;
+  font-size:11px;
+  margin-bottom:6px;
+  white-space:nowrap;
+}
+.occupancy-track {
+  display:flex;
+  height:150px;
+  align-items:flex-end;
+  background:repeating-linear-gradient(
+    to top,transparent 0,transparent 36px,#f0f3f7 37px,transparent 38px
+  );
+}
+.occupancy-bar {
+  width:100%;
+  border-radius:4px 4px 0 0;
+}
+.occupancy-bar.current { background:#204b80; }
+.occupancy-bar.previous { background:#b5c8df; }
+.occupancy-month > small {
+  display:block;
+  margin-top:10px;
+  color:#718099;
+  font-size:12px;
+}
+.occupancy-legend {
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+  font-size:13px;
+  color:#718099;
+}
+.occupancy-legend span {
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+}
+.occupancy-legend i {
+  width:8px;
+  height:8px;
+  border-radius:2px;
+  background:#204b80;
+}
+.occupancy-legend .previous { background:#b5c8df; }
+.target-panel > .panel-heading { padding:0 0 16px; }

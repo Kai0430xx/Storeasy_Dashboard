@@ -21,13 +21,7 @@ const percent = (r: Row) =>
       ? '去年為 0，不計算增減率'
       : `${r.percent > 0 ? '+' : ''}${r.percent.toFixed(1)}%`;
 
-function RevenueComparisonContent({
-  branches, data, month,
-}: {
-  branches: Row[];
-  data: Record<string, Row>;
-  month: string;
-}) {
+function RevenueComparisonContent({branches, data, month, showTotal}: {branches: Row[]; data: Record<string, Row>; month: string; showTotal: boolean}) {
   const {rows, total, previousMonth} =
     revenueComparison(branches, data, month);
   const loading = branches.some(
@@ -52,10 +46,10 @@ function RevenueComparisonContent({
         <p role="status">載入業績資料中…</p>
       ) : (
         <>
-          <p>
+          {showTotal && <p>
             可比較據點 {total.count}／{branches.length}；
             合計僅納入兩年都有業績的據點。
-          </p>
+          </p>}
 
           {month === taipeiDate().slice(0, 7) && (
             <p className="hint">
@@ -76,13 +70,13 @@ function RevenueComparisonContent({
                 </tr>
               </thead>
               <tbody>
-                <tr>
+                {showTotal && <tr>
                   <th>可比較據點合計</th>
                   <td>{money(total.current)}</td>
                   <td>{money(total.previous)}</td>
                   <td>{signedMoney(total.difference)}</td>
                   <td>{percent(total)}</td>
-                </tr>
+                </tr>}
                 {rows.map((r: Row) => (
                   <tr key={r.id}>
                     <td>{r.name}</td>
@@ -123,7 +117,7 @@ export default function RevenueComparison({
   ...props
 }: RevenueProps) {
   if (!collapsible) {
-    return <RevenueComparisonContent {...props}/>;
+    return <RevenueComparisonContent {...props} showTotal={collapsible}/>;
   }
 
   return (
@@ -134,7 +128,7 @@ export default function RevenueComparison({
           {props.month} 與 {Number(props.month.slice(0, 4)) - 1}
           {props.month.slice(4)} · KPI 實際業績金額
         </p>
-        <RevenueComparisonContent {...props}/>
+        <RevenueComparisonContent {...props} showTotal={collapsible}/>
       </div>
     </details>
   );

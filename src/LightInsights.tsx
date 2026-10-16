@@ -50,7 +50,7 @@ export default function LightInsights(
  const exits=events.filter(e=>e.type==='exit'&&!e.voided);
 
  return <section
-  className="panel target-panel"
+  className="panel target-panel operations-insights"
   aria-label="空倉與退租概況"
  >
   <h2>空倉與退租概況</h2>

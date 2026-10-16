@@ -1,5 +1,6 @@
+import {runTransaction} from "./waiting-stock";
 import {normalizeOtherGoals} from './other-goals.js';
-import {collection,doc,getDoc,runTransaction,serverTimestamp} from 'firebase/firestore';
+import {collection,doc,getDoc,serverTimestamp} from 'firebase/firestore';
 import {auth,db} from './firebase';
 import {parseLease} from './lease.js';
 import {taipeiDate,validDate} from './domain.js';

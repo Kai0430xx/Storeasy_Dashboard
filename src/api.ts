@@ -1,3 +1,4 @@
+import {runTransaction,writeBatch} from "./waiting-stock";
 import {activityCategories} from "./activity-categories.js";
 import {registerUnpaidRenewal} from "./manual-pending-renewal";
 import {deletePendingRenewal,savePendingUnit,confirmRenewalPayment,undoRenewalPayment} from "./pending-renewals";
@@ -31,8 +32,8 @@ import {
   doc,
   collection,
   getDoc, getDocs,
-  runTransaction,
-  writeBatch,
+  
+  
   serverTimestamp,
   getFirestore,
   connectFirestoreEmulator,
@@ -951,13 +952,13 @@ export async function execute(
       for (
         let index = 0;
         index < all.length;
-        index += 350
+        index += 8
       ) {
         const batch = writeBatch(db);
 
         for (
           const unit of
-          all.slice(index, index + 350)
+          all.slice(index, index + 8)
         ) {
           batch.set(
             doc(

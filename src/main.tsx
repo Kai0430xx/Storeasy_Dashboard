@@ -1,3 +1,7 @@
+import OccupancyChart from "./OccupancyChart";
+import WaitingList from "./WaitingList";
+import {useWaitingList} from "./waiting-list";
+import {matchingVacancies} from "./waiting-domain.js";
 import BranchOverviewDisclosure from "./BranchOverviewDisclosure";
 import RevenueComparison from "./RevenueComparison";
 import OperationManual from "./OperationManual";
@@ -138,6 +142,8 @@ function App() {
   const [loadAllUnits,setLoadAllUnits]=useState(false);
   const branches = [...branchRows].sort(compareBranches);
   const work = useWorkTasks(profile);
+  const waiting = useWaitingList(profile,branches,page === "waiting" || page === "units");
+  const [waitingFocus,setWaitingFocus] = useState<string|null>(null);
   const [activityCategory,setActivityCategory]=useState("all");
   const global =
     profile && ["admin", "supervisor"].includes(profile.role);
@@ -247,7 +253,7 @@ function App() {
   useEffect(() => {
     setData({});
     const stops: (() => void)[] = [];
-    if(page==="users"||page==="work"||page==="manual")return;
+    if (page==="users"||page==="work"||page==="manual" || page === "waiting") return;
 
     for (const branch of branches.filter(
       (item) =>
@@ -263,7 +269,7 @@ function App() {
           collection(db, "branches", branch.id, "activities"),
           where("month", "==", month),
         )],
-        ["months", page === "imports" ? collection(db,"branches",branch.id,"months") : query(collection(db,"branches",branch.id,"months"),where(documentId(),">=",`${Number(month.slice(0,4))-1}-01`),where(documentId(),"<",`${Number(month.slice(0,4))+1}-01`))],
+        ["months", page === "imports" ? collection(db,"branches",branch.id,"months") : query(collection(db,"branches",branch.id,"months"),where(documentId(),">=",monthOffset(month,-17)),where(documentId(),"<",`${Number(month.slice(0,4))+1}-01`))],
       ];
 
       if ((page === "units" && (branchId !== "all" || branches.filter(b=>!b.archived).length <= 1 || loadAllUnits)) || (page === "imports" && branchId !== "all")) {
@@ -475,6 +481,7 @@ function App() {
     ["activities", "活動優惠", Tags],
     ["imports", "資料匯入", Upload],
     ["targets", "目標與轉介", LayoutDashboard],
+    ...(canWrite ? [["waiting", "候補清單", Users]] : []),
     ...(canWrite ? [["work", "待辦事項", Check]] : []),
     ...(global ? [["users", "帳號與權限", Users]] : []),
   ];
@@ -507,6 +514,7 @@ function App() {
             >
               <Icon size={19} />
               {label}
+              {id === "waiting" && waiting.hasUnread && <i className="dot" aria-label="候補清單有合適空倉" />}
               {id === "work" && work.hasUnread && <i className="dot" aria-label="待辦事項有未讀變動" />}
               {id === "users" &&
                 users.some((item) => item.role === "pending") &&
@@ -644,7 +652,7 @@ function App() {
                           ? "各據點專屬優惠，使用成效一次掌握。"
                           : page === "imports"
                             ? "從 Excel 匯入倉位現況與歷史月度統計。"
-                            : page === "work" ? "追蹤據點待辦、子項目與討論。紅點代表其他人的未讀變動。" : page === "targets" ? "追蹤目標達成、年度差距及各月轉介紀錄。" : "管理註冊申請、角色與據點存取權限。"}
+                            : page === "waiting" ? "登記候補需求，追蹤符合材積與月租的空倉。" : page === "work" ? "追蹤據點待辦、子項目與討論。紅點代表其他人的未讀變動。" : page === "targets" ? "追蹤目標達成、年度差距及各月轉介紀錄。" : "管理註冊申請、角色與據點存取權限。"}
                   </p>
                 </div>
 
@@ -670,7 +678,7 @@ function App() {
                         ))}
                     </select>
 
-                    {page !== "work" && (
+                    {page !== "work" && page !== "waiting" && (
                     <input
                       aria-label="統計月份"
                       type="month"
@@ -698,6 +706,7 @@ function App() {
               )}
 
               {page === "manual" && <OperationManual/>}
+              {page === "waiting" && canWrite && profile && <WaitingList profile={profile} branches={branches} branchId={branchId} state={waiting} focus={waitingFocus} onFocus={setWaitingFocus}/>}
 {page === "dashboard" && (
                 <>
                   <div className="section-label">
@@ -765,51 +774,10 @@ function App() {
                             最近六個月 · 每月最後紀錄／本月即時
                           </p>
                         </div>
-                        <span className="legend">
-                          <i /> 出租率
-                        </span>
+                        <div className="occupancy-legend"><span><i/>本期</span><span><i className="previous"/>去年同期</span></div>
                       </div>
 
-                      <div className="chart">
-                        {Array.from(
-                          { length: 6 },
-                          (_, index) =>
-                            monthOffset(month, index - 5),
-                        ).map((value) => {
-                          const percentage = rate(stats(value));
-                          return (
-                            <div
-                              className="bar-column"
-                              key={value}
-                            >
-                              <span>
-                                {percentage === null
-                                  ? "無資料"
-                                  : `${percentage.toFixed(1)}%`}
-                              </span>
-                              <div className="bar-track">
-                                <div
-                                  className={
-                                    value === month
-                                      ? "bar highlight"
-                                      : "bar"
-                                  }
-                                  style={{
-                                    height:
-                                      percentage === null
-                                        ? "0%"
-                                        : `${percentage}%`,
-                                  }}
-                                />
-                              </div>
-                              <small>
-                                {value.slice(5)} 月
-                              </small>
-                            </div>
-                          );
-                        })}
-                      </div>
-
+                      <OccupancyChart month={month} rateFor={m=>rate(stats(m))}/>
                       <div className="comparisons">
                         {[
                           ["較上個月", previous],
@@ -882,7 +850,7 @@ function App() {
                     </section>
                   </div>
 
-                  <BranchOverviewDisclosure key={branchId} collapsed={branchId === "all"}><section className="panel">
+                  <BranchOverviewDisclosure key={"overview-"+branchId} collapsed={branchId === "all"}><section className="panel">
                     <div className="panel-heading">
                       <div>
                         <h2>各據點營運概況</h2>
@@ -974,7 +942,7 @@ function App() {
                     </div>
                   </section></BranchOverviewDisclosure>
 
-                  <RevenueComparison key={branchId} branches={visible} data={data} month={month} collapsible={branchId === "all"}/>
+                  <RevenueComparison key={"revenue-"+branchId} branches={visible} data={data} month={month} collapsible={branchId === "all"}/>
                   <section className="panel">
                     <div className="panel-heading">
                       <div>
@@ -1138,7 +1106,10 @@ function App() {
                                   NT$ {Number(unit.price).toLocaleString()}
                                 </td>
                                 <td>
-                                  <span className={`badge ${leaseStatus(unit, currentDate).color}`}>{leaseStatus(unit, currentDate).label}</span>
+                                  <span className={`badge ${leaseStatus(unit, currentDate).color}`}>{leaseStatus(unit, currentDate).label}</span>{canWrite && !unit.missing && !unit.archived && unit.status==='vacant' && waiting.ready && (()=>{
+      const matched=waiting.rows.filter(r=>matchingVacancies(r,[unit]).length>0);
+      return matched.length>0?<button className="text-button waiting-unit-match" onClick={()=>{setWaitingFocus("unit:"+JSON.stringify([unit.branchId,unit.code]));setBranchId(unit.branchId);setPage('waiting');}}>符合候補 {matched.length} 筆</button>:null;
+    })()}
                                 </td>
                                 <td>{unit.leasePeriod || "—"}</td>{status === "vacant" && <td><VacancyCell unit={unit} editable={Boolean(canWrite)} /></td>}
                                 <td>{unit.note || "—"}</td>

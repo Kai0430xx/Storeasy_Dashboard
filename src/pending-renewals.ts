@@ -1,4 +1,5 @@
-import {collection,doc,getDoc,getDocs,query,where,runTransaction,serverTimestamp} from 'firebase/firestore';
+import {runTransaction} from "./waiting-stock";
+import {collection,doc,getDoc,getDocs,query,where,serverTimestamp} from 'firebase/firestore';
 import {auth,db} from './firebase';
 import {normalizeUnits,taipeiDate,validDate} from './domain.js';
 import {parseLease} from './lease.js';

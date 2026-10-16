@@ -695,3 +695,9 @@ button.flow-row:hover { background:#f4f7fb; }
 .modal > .modal-heading > button:hover:enabled {
   background: #edf2f8;
 }
+
+/* Consistent dashboard insight typography. */
+.operations-insights h2 { font-size:20px; margin:0 0 12px; }
+.operations-insights h3 { font-size:18px; }
+.operations-insights > p:not(.hint) { font-size:16px; line-height:1.7; }
+.operations-insights > .badge { font-size:14px; margin:4px 10px 4px 0; }
