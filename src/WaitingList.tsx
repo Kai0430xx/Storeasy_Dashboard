@@ -1,3 +1,4 @@
+import WaitingBranches from "./WaitingBranches";
 import WaitingMatches from "./WaitingMatches";
 import {WaitingDateFields,WaitingStatus} from "./WaitingFields";
 import WaitingNotes from "./WaitingNotes";
@@ -15,7 +16,7 @@ const labels:Row=waitingStatusLabels;
 const span=(lo:any,hi:any,suffix='')=>lo==null&&hi==null?'不限':`${lo??'不限'} ～ ${hi??'不限'}${suffix}`;
 const blank=()=>({date:taipeiDate(),name:'',phone:'',email:'',volumeMin:'',volumeMax:'',priceMin:'',priceMax:'',needed:'',expires:'',noteDrafts:[],items:'',note:'',branchIds:[],otherBranches:'',status:'waiting'});
 export type WaitingState=ReturnType<typeof useWaitingList>;
-export default function WaitingList({profile,branches,branchId,state,focus,onFocus}: {profile:Row;branches:Row[];branchId:string;state:WaitingState;focus:string|null;onFocus:(id:string|null)=>void}){
+export default function WaitingList({profile,branches,branchId,state,focus,onFocus,onRent}: {profile:Row;branches:Row[];branchId:string;state:WaitingState;focus:string|null;onFocus:(id:string|null)=>void;onRent:(unit:Row)=>Promise<void>}){
  const [hasUnaddedNote,setHasUnaddedNote]=useState(false);
  const [pendingStatus,setPendingStatus]=useState<Record<string,string>>({});
  const [unitFilter,setUnitFilter]=useState<string[]|null>(null);
@@ -44,16 +45,31 @@ export default function WaitingList({profile,branches,branchId,state,focus,onFoc
   <div className="toolbar"><div className="search"><SearchInput aria-label="搜尋候補" placeholder="搜尋姓名、電話前四碼、物品或備註" value={search} onChange={e=>setSearch(e.target.value)} onClear={()=>setSearch('')}/></div><span className="hint">{state.syncing?'正在建立既有空倉索引…':`共 ${list.length} 筆`} · 需求金額以月租比對</span></div>
   <p className="waiting-reminder-legend"><span><i className="dot waiting-dot-yellow"/>新增候補或新空倉配對</span><span><i className="dot waiting-dot-red"/>需求已到期未讀</span></p>
   {unitFilter&&<div className="alert success">僅顯示符合空倉 {unitFilter[1]} 的候補<button onClick={()=>setUnitFilter(null)}>顯示全部候補</button></div>}
-  <section className="panel"><div className="table-wrap"><table><thead><tr><th>登記日期</th><th>姓名</th><th>候補據點</th><th>需求材積</th><th>需求月租</th><th>需求時間</th><th>需求到期時間</th><th>合適空倉</th><th>狀態</th></tr></thead><tbody>{list.map(r=><tr key={r.id}>
-   <td>{r.date}</td><td><button className="text-button waiting-name" onClick={()=>open(r)}>{r.name}{state.notification(r)&&<i className={'dot waiting-dot-'+state.notification(r)} aria-label={state.notification(r)==='red'?'需求已到期未讀':'有新的候補或合適空倉'}/>}</button></td><td>{branchText(r)}</td><td>{span(r.volumeMin,r.volumeMax)}</td><td>{span(r.priceMin,r.priceMax,' 元')}</td><td>{displayWaitingDate(r.needed)}</td><td>{displayWaitingDate(r.expires)}{state.isExpired(r)&&<span className="waiting-expired">已到期</span>}</td><td><button className="text-button" onClick={()=>open(r)}>{activeWaiting(r)?(state.ready?`${state.matches[r.id]?.length||0} 間`:'載入中…'):''}</button></td><td>{r.deleting?"刪除尚未完成":labels[r.status]}</td>
+  <section className="panel waiting-summary"><div className="table-wrap"><table className="waiting-list-table"><thead><tr><th>登記日期</th><th>姓名</th><th>候補據點</th><th>需求材積</th><th>需求月租</th><th>需求時間</th><th>需求到期時間</th><th>合適空倉</th><th>狀態</th></tr></thead><tbody>{list.map(r=><tr key={r.id}>
+   <td data-label="登記日期">{r.date}</td><td data-label="姓名"><button className="text-button waiting-name" onClick={()=>open(r)}>{r.name}{state.notification(r)&&<i className={'dot waiting-dot-'+state.notification(r)} aria-label={state.notification(r)==='red'?'需求已到期未讀':'有新的候補或合適空倉'}/>}</button></td><td data-label="候補據點"><WaitingBranches labels={[
+     ...r.branchIds.map((id:string)=>
+      String(names.get(id)||'據點名稱載入中')),
+     ...(r.otherBranches?['其它：'+r.otherBranches]:[])
+    ]}/></td><td data-label="需求材積">{span(r.volumeMin,r.volumeMax)}</td><td data-label="需求月租">{span(r.priceMin,r.priceMax,' 元')}</td><td data-label="需求時間">{displayWaitingDate(r.needed)}</td><td data-label="需求到期時間">{displayWaitingDate(r.expires)}{state.isExpired(r)&&<span className="waiting-expired">已到期</span>}</td><td data-label="合適空倉"><button className="text-button" onClick={()=>open(r)}>{activeWaiting(r)?(state.ready?`${state.matches[r.id]?.length||0} 間`:'載入中…'):''}</button></td><td data-label="狀態">{r.deleting?"刪除尚未完成":labels[r.status]}</td>
   </tr>)}</tbody></table></div>{state.ready&&!list.length&&<p className="empty">沒有符合的候補紀錄。</p>}{!state.ready&&!state.error&&<p role="status">載入候補清單中…</p>}</section>
   {row&&!edit&&<div className="modal-backdrop"><section className="modal wide" role="dialog" aria-modal="true" aria-label="候補明細"><div className="modal-heading"><h2>{row.name}・候補明細</h2><button aria-label="關閉" onClick={()=>setSelected(null)}><X size={20}/></button></div>
    <dl className="waiting-details">{[['登記日期',row.date],['候補據點',branchText(row)],['電話前四碼',row.phone],['Email',row.email],['需求材積',span(row.volumeMin,row.volumeMax)],['需求月租',span(row.priceMin,row.priceMax,' 元')],['需求時間',displayWaitingDate(row.needed)],['需求到期時間',displayWaitingDate(row.expires)],['存放物品',row.items]].map(([k,v])=><div key={k}><dt>{k}</dt><dd>{v||''}</dd></div>)}</dl>
    {state.isExpired(row)&&<p className="waiting-expired">需求已到期，請確認是否仍需候補。</p>}
    <WaitingStatus value={row.status} busy={busy||!!row.deleting} onChange={next=>status(row,next)}/>
-   <WaitingNotes rowId={row.id} legacy={row.note} disabled={!!row.deleting}/>
+   <WaitingNotes rowId={row.id} legacy={row.note} disabled={!!row.deleting} onPendingChange={setHasUnaddedNote}/>
    
-   <WaitingMatches key={row.id} active={activeWaiting(row)} units={state.matches[row.id]||[]} branchIds={row.branchIds} names={names}/>
+   <WaitingMatches key={row.id} active={activeWaiting(row)} units={state.matches[row.id]||[]} branchIds={row.branchIds} names={names}
+     canRent={id=>
+      ['admin','supervisor'].includes(profile.role)||
+      (profile.role==='manager'&&
+       (profile.branchIds||[]).includes(id))}
+     onRent={async unit=>{
+      if(hasUnaddedNote&&!window.confirm(
+       '尚有未儲存的備註，離開後不會保留，確定前往承租？'
+      ))return;
+      await onRent({...unit,waitingId:row.id});
+      setSelected(null);
+     }}/>
    <div className="toolbar"><button className="secondary" disabled={busy||!!row.deleting} onClick={()=>startEdit(row)}>編輯</button><button className="text-button danger" disabled={busy} onClick={()=>remove(row)}>{row.deleting?"重試刪除":"刪除"}</button></div>
   </section></div>}
   {edit&&<div className="modal-backdrop"><section className="modal wide waiting-editor" role="dialog" aria-modal="true" aria-label={edit.id?'編輯候補':'新增候補'}><div className="modal-heading"><h2>{edit.id?'編輯候補':'新增候補'}</h2><button aria-label="關閉" disabled={busy} onClick={()=>setEdit(null)}><X size={20}/></button></div><form onSubmit={save}><fieldset disabled={busy} className="waiting-form">

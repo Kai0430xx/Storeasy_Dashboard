@@ -99,3 +99,20 @@ export async function addWaitingNote(id:string,raw:WaitingRow){
  const clean=contactInput(raw),parent=doc(db,'waitingList',id),ref=doc(collection(parent,'notes'));
  await runTransaction(db,async tx=>{const root=await tx.get(parent);if(!root.exists()||root.data().deleting)throw new Error('候補紀錄已刪除或正在刪除');tx.set(ref,{...clean,createdBy:uid,createdAt:serverTimestamp()});});
 }
+
+export async function deleteWaitingNote(id:string,noteId?:string){
+ if(!auth.currentUser)throw new Error('請先登入');
+ const parent=doc(db,'waitingList',id);
+ await runTransaction(db,async tx=>{
+  const root=await tx.get(parent);
+  if(!root.exists()||root.data().deleting)
+   throw new Error('候補已刪除或正在刪除');
+  if(noteId)tx.delete(doc(parent,'notes',noteId));
+  else tx.update(parent,{
+   note:'',
+   revision:root.data().revision+1,
+   updatedBy:auth.currentUser!.uid,
+   updatedAt:serverTimestamp()
+  });
+ });
+}

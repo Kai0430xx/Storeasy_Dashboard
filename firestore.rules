@@ -970,7 +970,7 @@ match /workPeople/{uid} {
      && request.resource.data.order is number && request.resource.data.order>=0 && request.resource.data.order<=999999999999999
      && request.resource.data.createdBy==request.auth.uid && request.resource.data.createdAt==request.time;
     allow update: if false;
-    allow delete: if waitingScope(get(/databases/$(database)/documents/waitingList/$(id)).data) && get(/databases/$(database)/documents/waitingList/$(id)).data.get('deleting',false);
+    allow delete: if waitingScope(get(/databases/$(database)/documents/waitingList/$(id)).data);
    }
   }
   match /waitingReads/{uid}/items/{id} {

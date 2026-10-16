@@ -360,6 +360,51 @@ function App() {
     (async()=>{for(const id of JSON.parse(missingKey)){await call("purgeMissingUnits",{branchId:id});}})().catch(e=>{if(active)setError(friendly(e));});
     return()=>{active=false;};
   },[page,Boolean(canWrite),missingKey]);
+
+  async function rentWaitingUnit(unit:Row){
+    const id=unit.branchId;
+    if(!profile||
+     (!["admin","supervisor"].includes(profile.role)&&
+      !(profile.role==="manager"&&
+       (profile.branchIds||[]).includes(id))))
+     throw new Error("沒有此據點的承租操作權限");
+
+    const [branchSnapshot,unitSnapshot]=await Promise.all([
+     getDoc(doc(db,"branches",id)),
+     getDoc(doc(db,"branches",id,"units",unit.code))
+    ]);
+
+    if(!branchSnapshot.exists()||
+     branchSnapshot.data().archived||
+     branchSnapshot.data().importing)
+     throw new Error("據點正在匯入或已停用，請稍後再試");
+
+    if(!unitSnapshot.exists()||
+     unitSnapshot.data().status!=="vacant"||
+     unitSnapshot.data().missing||
+     unitSnapshot.data().archived)
+     throw new Error("此倉位已非可承租空倉，請重新確認配對");
+
+    setError("");
+    setNotice("");
+    setBranchId(id);
+    setMonth(today().slice(0,7));
+    setSearch(unit.code);
+    setStatus("vacant");
+    setPage("units");
+
+    setModal({
+     kind:"event",
+     type:"new",
+     unit:{
+      ...unitSnapshot.data(),
+      branchId:id,
+      branchName:branchSnapshot.data().name
+     },
+     eventMonth:today().slice(0,7),
+     waitingId:unit.waitingId
+    });
+  }
   const stats = (targetMonth: string) => {
     const isCurrent = targetMonth === today().slice(0, 7);
     const values = visible.map((branch) => {
@@ -715,7 +760,7 @@ function App() {
               )}
 
               {page === "manual" && <OperationManual/>}
-              {page === "waiting" && canWrite && profile && <WaitingList profile={profile} branches={branches} branchId={branchId} state={waiting} focus={waitingFocus} onFocus={setWaitingFocus}/>}
+              {page === "waiting" && canWrite && profile && <WaitingList profile={profile} branches={branches} branchId={branchId} state={waiting} focus={waitingFocus} onFocus={setWaitingFocus} onRent={rentWaitingUnit}/>}
 {page === "dashboard" && (
                 <>
                   <div className="section-label">
@@ -1752,7 +1797,7 @@ function App() {
                     () => call("recordEvent", {
                       branchId: modal.unit.branchId,
                       code: modal.unit.code,
-                      type: modal.type,
+                      type: modal.type, waitingId: modal.waitingId,
                       date: form.get("date"),
                       activityIds: form.getAll("activity"),
                       exitReason: form.get("exitReason"), exitCategory: form.get("exitCategory"),

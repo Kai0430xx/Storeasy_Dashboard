@@ -323,7 +323,28 @@ export async function execute(
         taipeiDate().slice(0, 7)
       );
 
-      await runTransaction(db, async (transaction) => {
+      
+      if(data.waitingId&&
+       (type!=="new"||
+        typeof data.waitingId!=="string"||
+        data.waitingId.includes("/")))
+       throw new Error("候補承租資料不正確");
+      const waitingRef=data.waitingId?
+       doc(db,"waitingList",data.waitingId):null;
+await runTransaction(db, async (transaction) => {
+        const waitingSnapshot=waitingRef?await transaction.get(waitingRef):null;
+
+        if(waitingRef&&(
+         !waitingSnapshot?.exists()||
+         waitingSnapshot.data().deleting||
+         !['waiting','contacted','visit'].includes(
+          waitingSnapshot.data().status
+         )||
+         !waitingSnapshot.data().branchIds.includes(branchId)
+        ))throw new Error(
+         "候補已刪除、狀態已變更或未包含此據點，請重新確認"
+        );
+
         const [
           branchSnapshot,
           unitSnapshot,
@@ -444,6 +465,7 @@ export async function execute(
           leaseStart: unit.leaseStart || null,
           leaseEnd: unit.leaseEnd || null,
         };
+        if(waitingRef&&waitingSnapshot)transaction.update(waitingRef,{status:"rented",revision:waitingSnapshot.data()!.revision+1,updatedBy:me,updatedAt:time()});
         const delta =
           type === "new"
             ? 1

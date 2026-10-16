@@ -4,13 +4,27 @@ import {useState} from 'react';
 type Row=Record<string,any>;
 
 export default function WaitingMatches({
- active,units,branchIds,names
+ active,units,branchIds,names,canRent,onRent
 }:{
  active:boolean;
  units:Row[];
  branchIds:string[];
- names:Map<string,any>;
+ names:Map<string,any>;canRent:(id:string)=>boolean;onRent:(unit:Row)=>Promise<void>;
 }){
+ const [opening,setOpening]=useState(false);
+ const [rentError,setRentError]=useState('');
+ async function rent(unit:Row){
+  if(opening)return;
+  setOpening(true);
+  setRentError('');
+  try{
+   await onRent(unit);
+  }catch(e:any){
+   setRentError(e.message);
+  }finally{
+   setOpening(false);
+  }
+ }
  const [chosen,setChosen]=useState<string[]|null>(null);
  const [low,setLow]=useState('');
  const [high,setHigh]=useState('');
@@ -155,7 +169,8 @@ export default function WaitingMatches({
      </button>
     </div>
 
-    {invalid&&
+    {rentError&&<p role="alert" className="alert error">{rentError}</p>}
+  {invalid&&
      <p role="alert" className="alert error">
       材積請填非負數，下限不可大於上限。
      </p>
@@ -175,7 +190,15 @@ export default function WaitingMatches({
        {rows.map(u=>
         <tr key={u.branchId+'/'+u.code}>
          <td>{names.get(u.branchId)||u.branchId}</td>
-         <td>{u.code}</td>
+         <td>{canRent(u.branchId)?
+     <button type="button" className="text-button"
+      aria-label={'承租 '+u.code}
+      disabled={opening}
+      onClick={()=>rent(u)}>{u.code}</button>:
+     <span title="僅限該據點店長、主管或管理員辦理承租">
+      {u.code}
+     </span>
+    }</td>
          <td>{u.volume}</td>
          <td>NT$ {u.price.toLocaleString('zh-TW')}</td>
         </tr>
