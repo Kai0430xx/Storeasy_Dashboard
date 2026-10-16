@@ -352,6 +352,13 @@ function App() {
     })),
   );
 
+  const missingKey=JSON.stringify([...new Set(units.filter(u=>u.missing).map(u=>u.branchId))].sort());
+  useEffect(()=>{
+    if(page!=="units"||!canWrite)return;
+    let active=true;
+    (async()=>{for(const id of JSON.parse(missingKey)){await call("purgeMissingUnits",{branchId:id});}})().catch(e=>{if(active)setError(friendly(e));});
+    return()=>{active=false;};
+  },[page,Boolean(canWrite),missingKey]);
   const stats = (targetMonth: string) => {
     const isCurrent = targetMonth === today().slice(0, 7);
     const values = visible.map((branch) => {
@@ -515,7 +522,7 @@ function App() {
             >
               <Icon size={19} />
               {label}
-              {id === "waiting" && waiting.hasUnread && <i className="dot" aria-label="候補清單有合適空倉" />}
+              {id === "waiting" && waiting.hasUnread && <i className={"dot waiting-dot-"+waiting.alertTone} aria-label={waiting.alertTone==="red"?"候補清單有到期提醒":"候補清單有未讀提醒"} />}
               {id === "work" && work.hasUnread && <i className="dot" aria-label="待辦事項有未讀變動" />}
               {id === "users" &&
                 users.some((item) => item.role === "pending") &&

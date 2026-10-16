@@ -44,7 +44,7 @@ export default function InventoryReview({units,busy,onSubmit,onError,months=[]}:
     return {...d,after,before:row.before,signature:row.signature};
    });
    if(!differenceOnly&&!window.confirm(
-    '全部匯入將依整份檔案覆蓋倉位現況，檔案未列出的舊倉位會保留並標示清單中消失；不另外加計承租、續約或退租筆數。確定繼續？'
+    '全部匯入將依整份檔案覆蓋倉位現況，檔案未列出的舊倉位會從現況移除，既有承租、續約等異動歷史、待收款與 KPI 保留；不另外加計承租、續約或退租筆數。確定繼續？'
    ))return;
    onError('');
    onSubmit(differenceOnly?{
@@ -107,7 +107,7 @@ export default function InventoryReview({units,busy,onSubmit,onError,months=[]}:
    <p>倉位表：{preview.filename}・差異 {codes.length} 筆，相同 {preview.unchanged.length} 筆。</p>
    {preview.missing.length>0&&<p className="hint">
     檔案未列出：{preview.missing.map((r:any)=>r.code).join('、')}。
-    全部匯入會保留並標示清單中消失；僅匯入差異時不更動這些倉位。
+    全部匯入會移除這些倉位，既有異動歷史與 KPI 保留；僅匯入差異時不更動這些倉位。
    </p>}
 
    <h3>與既有資料不同的倉位</h3>

@@ -1,3 +1,4 @@
+import {purgeMissingUnits} from "./purge-missing-units";
 import {runTransaction,writeBatch} from "./waiting-stock";
 import {activityCategories} from "./activity-categories.js";
 import {registerUnpaidRenewal} from "./manual-pending-renewal";
@@ -79,6 +80,7 @@ export async function execute(
   const me = uid();
 
   switch (name) {
+    case "purgeMissingUnits": return purgeMissingUnits(data.branchId);
     case "registerProfile": {
       if (auth.currentUser?.email !== loginEmail(data.username)) throw new Error("帳號不符");
       const ref = doc(db,"users",me), person = doc(db,"workPeople",me);
@@ -939,15 +941,8 @@ export async function execute(
         })
       );
 
-      for (const existing of old.docs) {
-        if (!codes.has(existing.id)) {
-          all.push({
-            ...existing.data(),
-            code: existing.id,
-            missing: true
-          });
-        }
-      }
+      const removed=old.docs.filter(d=>!codes.has(d.id));
+      for(let i=0;i<removed.length;i+=8){const batch=writeBatch(db);removed.slice(i,i+8).forEach(d=>batch.delete(d.ref));await batch.commit();}
 
       for (
         let index = 0;
