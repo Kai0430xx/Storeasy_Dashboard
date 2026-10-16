@@ -28,8 +28,10 @@ jobs:
 
       - name: Apply dashboard features
         run: |
-          python3 scripts/update-background-push.py
-          python3 scripts/update-app-icon.py
+          python3 scripts/update-mobile-notifications.py
+          if [ -f public/icons/storeasy-icon.png ] && [ -f scripts/update-app-icon.py ]; then
+            python3 scripts/update-app-icon.py
+          fi
         
       - name: Install dependencies
         run: |
