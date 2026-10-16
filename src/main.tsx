@@ -1,3 +1,4 @@
+import BranchOverviewDisclosure from "./BranchOverviewDisclosure";
 import RevenueComparison from "./RevenueComparison";
 import OperationManual from "./OperationManual";
 import {activityCategories,activityMatches} from "./activity-categories.js";
@@ -881,7 +882,7 @@ function App() {
                     </section>
                   </div>
 
-                  <section className="panel">
+                  <BranchOverviewDisclosure key={branchId} collapsed={branchId === "all"}><section className="panel">
                     <div className="panel-heading">
                       <div>
                         <h2>各據點營運概況</h2>
@@ -971,7 +972,7 @@ function App() {
                         <Empty text="尚無據點，請主管新增據點並匯入資料。" />
                       )}
                     </div>
-                  </section>
+                  </section></BranchOverviewDisclosure>
 
                   <RevenueComparison key={branchId} branches={visible} data={data} month={month} collapsible={branchId === "all"}/>
                   <section className="panel">
