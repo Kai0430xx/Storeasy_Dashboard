@@ -39,7 +39,7 @@ export default function YearGoalsView({branches,records,data,year}:{branches:Row
  return <>
   <button disabled={!branches.length} onClick={()=>{setSelected(branches.length===1?branches[0].id:'');setOpen(true);}}>查看該據點當年度目標一覽</button>
   {open&&<div className="modal-backdrop" onClick={e=>{if(e.target===e.currentTarget)setOpen(false);}}><section ref={modal} className="modal year-goals-modal" role="dialog" aria-modal="true" aria-label="據點當年度目標一覽">
-   <div className="panel-heading"><h2>{branch?.name||'據點'}・{year} 年度目標一覽</h2><button aria-label="關閉年度目標一覽" onClick={()=>setOpen(false)}>×</button></div>
+   <div className="panel-heading modal-heading"><h2>{branch?.name||'據點'}・{year} 年度目標一覽</h2><button aria-label="關閉年度目標一覽" onClick={()=>setOpen(false)}>×</button></div>
    {branches.length>1&&<label>選擇據點<select aria-label="年度目標一覽據點" value={selected} onChange={e=>setSelected(e.target.value)}><option value="">請選擇據點</option>{branches.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></label>}
    <p>依 1～12 月列出各月設定的目標；數值採 KPI 或已儲存的手動修正。「其它」採手填成果。當月所有設定的目標都達成才算達標，以紅字顯示；缺少實際數值顯示資料未齊。轉介超過 3 筆以紅字標示。</p>
    {!branch?<p>請選擇要查看的據點。</p>:!ready?<p role="status">載入年度資料中…</p>:<div className="table-wrap year-goals-table" tabIndex={0} aria-label="年度目標表格捲動區"><table aria-label="據點全年每月目標"><thead><tr><th>月份</th><th>目標內容</th><th>實際數值</th><th>是否達標</th><th>轉介數量</th></tr></thead><tbody>{rows.flatMap(r=>{const list=items(r);return list.map((item,i)=><tr key={`${r.month}-${i}`}>

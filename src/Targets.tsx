@@ -76,7 +76,7 @@ export default function Targets({branches,month,profile,data}:{branches:Row[];mo
    </section>;
   })}
   </details>
-  {editing&&<div className="modal-backdrop"><section className="modal" role="dialog" aria-modal="true" aria-label={editing.kind==='goal'?'設定目標':'填寫轉介'}><button disabled={busy} aria-label="關閉" onClick={()=>setEditing(null)}>×</button><h2>{editing.branch.name}・{editing.period||month}</h2>
+  {editing&&<div className="modal-backdrop"><section className="modal" role="dialog" aria-modal="true" aria-label={editing.kind==='goal'?'設定目標':'填寫轉介'}><div className="modal-heading"><h2>{editing.branch.name}・{editing.period||month}</h2><button disabled={busy} aria-label="關閉" onClick={()=>setEditing(null)}>×</button></div>
    {error&&<div role="alert">{error}</div>}
    {editing.kind==='goal'?<form onSubmit={e=>{e.preventDefault();const v=Object.fromEntries(new FormData(e.currentTarget));run(()=>saveGoal(editing.branch.id,editing.period,{...v,other:editing.values.other||{}}));}}>
     <p>留白代表未設定；百分比請輸入 80，表示 80%。</p>
@@ -91,7 +91,7 @@ export default function Targets({branches,month,profile,data}:{branches:Row[];mo
     <button type="button" disabled={entries.length>=200} onClick={()=>setEntries(v=>[...v,{code:'',leasePeriod:''}])}>新增轉介明細</button><button className="primary" disabled={busy}>儲存 {entries.length} 筆轉介</button>
    </form>}
   </section></div>}
-  {history&&<div className="modal-backdrop"><section className="modal" role="dialog" aria-modal="true" aria-label="目標修改紀錄"><button aria-label="關閉" onClick={()=>setHistory(null)}>×</button><h2>{history.branch.name}・目標修改紀錄</h2>{history.items.sort((a:Row,b:Row)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)).map((h:Row)=><div key={h.id}><strong>{h.period} 第 {h.next.revision} 次設定</strong><p>{h.createdAt?.toDate?.().toLocaleString('zh-TW',{timeZone:'Asia/Taipei'})}・操作帳號 UID：{h.by}</p>{['occupancy','performance','referrals'].map(k=><p key={k}>{({occupancy:'出租率',performance:'業績完成率',referrals:'轉介數量'} as Row)[k]}：{h.previous?.[k]??'未設定'} → {h.next[k]??'未設定'}</p>)}<p>其它目標（修改前）</p><OtherGoalResults goals={h.previous?.other}/><p>其它目標（修改後）</p><OtherGoalResults goals={h.next.other}/></div>)}{!history.items.length&&<p>尚無修改紀錄</p>}</section></div>}
+  {history&&<div className="modal-backdrop"><section className="modal" role="dialog" aria-modal="true" aria-label="目標修改紀錄"><div className="modal-heading"><h2>{history.branch.name}・目標修改紀錄</h2><button aria-label="關閉" onClick={()=>setHistory(null)}>×</button></div>{history.items.sort((a:Row,b:Row)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)).map((h:Row)=><div key={h.id}><strong>{h.period} 第 {h.next.revision} 次設定</strong><p>{h.createdAt?.toDate?.().toLocaleString('zh-TW',{timeZone:'Asia/Taipei'})}・操作帳號 UID：{h.by}</p>{['occupancy','performance','referrals'].map(k=><p key={k}>{({occupancy:'出租率',performance:'業績完成率',referrals:'轉介數量'} as Row)[k]}：{h.previous?.[k]??'未設定'} → {h.next[k]??'未設定'}</p>)}<p>其它目標（修改前）</p><OtherGoalResults goals={h.previous?.other}/><p>其它目標（修改後）</p><OtherGoalResults goals={h.next.other}/></div>)}{!history.items.length&&<p>尚無修改紀錄</p>}</section></div>}
  </>;
 }
 export function VacancyCell({unit,editable}:{unit:Row;editable:boolean}){

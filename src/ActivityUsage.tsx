@@ -18,7 +18,7 @@ export default function ActivityUsage({
 
   return (
     <>
-      <h2>{activity.name} · 使用明細</h2>
+      <h2>{activity.name} · 使用明細</h2><p>活動分類：<strong>{activity.category || "未分類"}</strong></p>
       <p>
         {activity.branchName}／{month}：
         {rows.length} 次使用，

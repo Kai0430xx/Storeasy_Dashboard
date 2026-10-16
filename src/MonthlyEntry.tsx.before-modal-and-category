@@ -1,0 +1,33 @@
+import {normalizeOtherActuals,sameOtherGoals} from './other-goals.js';
+import {useEffect,useState} from 'react';
+import {collection,doc,getDoc,runTransaction,serverTimestamp} from 'firebase/firestore';
+import {auth,db} from './firebase';
+import {parseLease} from './lease.js';
+import {taipeiDate} from './domain.js';
+type Row=Record<string,any>;
+export default function MonthlyEntry({branch,month}:{branch:Row;month:string}){
+ const [open,setOpen]=useState(false),[allowed,setAllowed]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[values,setValues]=useState<Row>({occupancy:'',performance:'',reason:''}),[entries,setEntries]=useState<Row[]>([]),[original,setOriginal]=useState<Row>({}),[otherGoals,setOtherGoals]=useState<Row>({}),[otherValues,setOtherValues]=useState<Row>({});
+ useEffect(()=>{let stop=false;const uid=auth.currentUser?.uid;if(uid)getDoc(doc(db,'users',uid)).then(s=>{if(!stop)setAllowed(['admin','supervisor'].includes(s.data()?.role)||(s.data()?.role==='manager'&&s.data()?.branchIds?.includes(branch.id)));}).catch(()=>{});return()=>{stop=true;};},[branch.id]);
+ useEffect(()=>{setOpen(false);setNotice('');setError('');},[month]);
+ async function load(){setBusy(true);setError('');try{const [a,r,m,g]=await Promise.all(['actuals','referrals','months','targets'].map(c=>getDoc(doc(db,'branches',branch.id,c,month))));setValues({occupancy:a.data()?.occupancy??'',performance:a.data()?.performance??'',reason:a.data()?.reason||''});setEntries(r.data()?.entries||[]);setOriginal(m.data()?.source==='import'?m.data()!:{});setOtherGoals(g.data()?.other||{});setOtherValues(a.data()?.other||{});setOpen(true);}catch(e){setError(String(e));}finally{setBusy(false);}}
+ async function save(e:React.FormEvent){e.preventDefault();setBusy(true);setError('');try{
+  const uid=auth.currentUser?.uid;if(!uid)throw Error('請先登入');if(month>taipeiDate().slice(0,7))throw Error('尚未到這個月份');
+  const actual:Row={};for(const k of ['occupancy','performance']){actual[k]=values[k]===''?null:Number(values[k]);if(actual[k]!=null&&(!Number.isFinite(actual[k])||actual[k]<0||(k==='occupancy'&&actual[k]>100)))throw Error('實際數值不合法');}
+  const reason=String(values.reason||'').trim();if((actual.occupancy!=null||actual.performance!=null)&&(!reason||reason.length>500))throw Error('手動修正請填寫原因（1～500 字）');
+  if(entries.length>200)throw Error('轉介最多 200 筆');const clean=entries.map(v=>{const code=String(v.code||'').trim(),lease=parseLease(v.leasePeriod);if(!code||code.length>80||code.includes('/')||!lease.leasePeriod)throw Error('每筆轉介請填倉位編號與合法租期');return {code,...lease};});if(new Set(clean.map(v=>v.code+'|'+v.leasePeriod)).size!==clean.length)throw Error('轉介明細重複');
+  const ref=doc(db,'branches',branch.id,'actuals',month),audit=doc(collection(db,'branches',branch.id,'actualHistory'));
+  await runTransaction(db,async t=>{const [old,goal,actor]=await Promise.all([t.get(ref),t.get(doc(db,'branches',branch.id,'targets',month)),t.get(doc(db,'users',uid))]);const p=actor.data();if(!p||!(['admin','supervisor'].includes(p.role)||(p.role==='manager'&&p.branchIds?.includes(branch.id))))throw Error('沒有修改此據點的權限');
+   if(!sameOtherGoals(goal.data()?.other||{},otherGoals))throw Error('其它目標已被修改，請關閉視窗後重新開啟');
+   const other=normalizeOtherActuals(otherGoals,otherValues);
+   const next={month,...actual,other,reason,revision:(old.data()?.revision||0)+1,changeId:audit.id,updatedBy:uid,updatedAt:serverTimestamp()};
+   t.set(ref,next);t.set(audit,{month,previous:old.data()||null,next,by:uid,createdAt:serverTimestamp()});
+   t.set(doc(db,'branches',branch.id,'referrals',month),{month,count:clean.length,entries:clean,updatedBy:uid,updatedAt:serverTimestamp(),targetRevision:goal.data()?.revision||0});
+  });setOpen(false);setNotice('本月數值與轉介已儲存');
+ }catch(e){setError(e instanceof Error?e.message:String(e));}finally{setBusy(false);}}
+ if(!allowed||month>taipeiDate().slice(0,7))return null;
+ return <><button className="text-button" disabled={busy} onClick={load}>設定實際數值</button>{notice&&<small role="status">{notice}</small>}{!open&&error&&<small role="alert">{error}</small>}{open&&<div className="modal-backdrop"><section className="modal wide" role="dialog" aria-modal="true" aria-label="本月實際數值與轉介"><button aria-label="關閉" disabled={busy} onClick={()=>setOpen(false)}>×</button><h2>{branch.name}・{month} 本月實際數值</h2>{error&&<p role="alert">{error}</p>}<form onSubmit={save}><p>留白使用原 KPI；填入數字則使用手動修正值。填 80 代表 80%。原 KPI 不會被覆寫。</p><p>原 KPI 出租率：{original.kpiMetrics?.occupancy??(original.total>0?original.rented/original.total*100:'未匯入')}；業績完成率：{original.kpiMetrics?.performance??'未匯入'}</p>{['occupancy','performance'].map(k=><label key={k}>{k==='occupancy'?'實際出租率（%）':'實際業績完成率（%）'}<input type="number" min="0" max={k==='occupancy'?100:undefined} step="0.01" value={values[k]} onChange={e=>setValues(v=>({...v,[k]:e.target.value}))}/></label>)}<label>修正原因<textarea maxLength={500} value={values.reason} onChange={e=>setValues(v=>({...v,reason:e.target.value}))}/></label>{Object.keys(otherGoals).length>0&&<><h3>其它目標實際數量</h3><p>實際數量達到目標即為達標；留白代表尚未填寫，0 代表已填寫 0。</p>{Object.entries(otherGoals).map(([key,g])=><label key={g.id}>{g.name}（目標 {g.target}）<input aria-label={`${g.name} 實際數量`} disabled={busy} type="number" min="0" max="1000000000" step="any" value={otherValues[key]?.goalId===g.id?otherValues[key].value:''} onChange={e=>setOtherValues(v=>({...v,[key]:{goalId:g.id,value:e.target.value}}))}/></label>)}</>}<h3>轉介 {entries.length} 筆</h3>{entries.length>3&&<strong className="referral-bonus">超過 3 筆・年終加成</strong>}{entries.map((v,i)=><fieldset key={i}><legend>轉介第 {i+1} 筆</legend><label>倉位編號<input required maxLength={80} value={v.code} onChange={e=>setEntries(rows=>rows.map((r,j)=>j===i?{...r,code:e.target.value}:r))}/></label><label>租期<input required placeholder="2026/10/08－2027/04/07" value={v.leasePeriod} onChange={e=>setEntries(rows=>rows.map((r,j)=>j===i?{...r,leasePeriod:e.target.value}:r))}/></label><button type="button" disabled={busy} onClick={()=>setEntries(rows=>rows.filter((_,j)=>j!==i))}>移除此筆</button></fieldset>)}<button type="button" disabled={busy||entries.length>=200} onClick={()=>setEntries(rows=>[...rows,{code:'',leasePeriod:''}])}>新增轉介</button><button className="primary" disabled={busy}>儲存本月實際數值與轉介</button></form></section></div>}</>;
+}
+
+// storeasy-other-monthly-v1
+
+// storeasy-opening-month-v1

@@ -159,7 +159,7 @@ export default function ImportSources({
             aria-modal="true"
             aria-label="刪除匯入資料"
           >
-            <h2>刪除匯入資料</h2>
+            <div className="modal-heading"><h2>刪除匯入資料</h2><button type="button" aria-label="關閉" disabled={busy} onClick={()=>setPending(null)}>×</button></div>
             <p>{pending.branchName}：{pending.name}</p>
 
             <p>
