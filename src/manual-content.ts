@@ -436,3 +436,22 @@ export const manualPages:ManualPage[]=[
 manualPages.splice(manualPages.findIndex(p=>p.id==='work'),0,waitingManual);
 manualPages.find(p=>p.id==='dashboard')?.topics.push(...waitingDashboardTopics);
 manualPages.find(p=>p.id==='units')?.topics.push(waitingUnitTopic);
+
+// branch-cheers-manual-v1
+manualPages.push({
+ id:'cheers',
+ title:'信心喊話',
+ intro:'主管與管理員設定各據點所有頁面頂端的鼓勵文字。',
+ access:'設定：主管／管理員；查看：具該據點權限的帳號',
+ topics:[{
+  title:'設定、預覽與清除喊話',
+  steps:[
+   '主管或管理員從左側點「信心喊話」，在設定據點選擇分店。',
+   '輸入最多 200 字，預覽會顯示淡黃色底、深色文字與大聲公，按儲存後同步至該據點。',
+   '選定該據點後，所有分頁最上方都會顯示；切換據點時改顯示對應文字。',
+   '未設定、清除喊話或留空儲存後，不會顯示文字、底色及大聲公。「全部據點」不混合顯示；只有一間所屬據點的店長或員工自動顯示該店喊話。',
+   '如其他主管同時修改，儲存會提示重新載入；先保留自己要用的文字，再重新載入確認。'
+  ],
+  result:'此設定不更動倉位、候補、待辦或 KPI。店長及員工沒有信心喊話設定選單，也不能修改設定。'
+ }]
+});

@@ -69,7 +69,32 @@ service cloud.firestore {
         || (d[k] is int && d[k] >= 0);
     }
 
-    match /users/{uid} {
+    
+  // branch-cheers-v1
+  match /branchCheers/{id} {
+   allow read: if branchAccess(id);
+
+   function validCheer(){
+    let d=request.resource.data;
+    return globalAccess()
+     && exists(/databases/$(database)/documents/branches/$(id))
+     && !get(/databases/$(database)/documents/branches/$(id)).data.get('archived',false)
+     && d.keys().hasOnly(['text','revision','updatedBy','updatedAt'])
+     && d.text is string
+     && d.text.size()>0
+     && d.text.size()<=200
+     && d.revision is int
+     && d.updatedBy==request.auth.uid
+     && d.updatedAt==request.time;
+   }
+
+   allow create: if validCheer()
+    && request.resource.data.revision==1;
+   allow update: if validCheer()
+    && request.resource.data.revision==resource.data.revision+1;
+   allow delete: if globalAccess();
+  }
+match /users/{uid} {
       allow read: if signedIn()
         && (
           request.auth.uid == uid

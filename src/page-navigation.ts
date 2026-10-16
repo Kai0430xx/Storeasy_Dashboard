@@ -1,6 +1,6 @@
 import {useCallback,useEffect,useState} from 'react';
 
-const pages = ['dashboard','units','activities','imports','targets','waiting','work','users','manual'];
+const pages = ['dashboard','units','activities','imports','targets','waiting','work','users','manual','cheers'];
 
 function readPage(){
  const page = window.location.hash.slice(1);
@@ -9,7 +9,7 @@ function readPage(){
 
 function allowed(page:string,role:string){
  if(role==='pending')return ['dashboard','manual'].includes(page);
- if(page==='users')return ['admin','supervisor'].includes(role);
+ if(['users','cheers'].includes(page))return ['admin','supervisor'].includes(role);
  if(['waiting','work'].includes(page))return ['admin','supervisor','manager'].includes(role);
  return pages.includes(page);
 }

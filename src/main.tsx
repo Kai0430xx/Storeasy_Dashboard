@@ -1,3 +1,5 @@
+import BranchCheers,{HeaderCheer} from "./BranchCheers";
+import {Megaphone} from "lucide-react";
 import {usePageNavigation} from "./page-navigation";
 import ActivityOverviewDisclosure from "./ActivityOverviewDisclosure";
 import OccupancyChart from "./OccupancyChart";
@@ -255,7 +257,7 @@ function App() {
   useEffect(() => {
     setData({});
     const stops: (() => void)[] = [];
-    if (page==="users"||page==="work"||page==="manual" || page === "waiting") return;
+    if (page === "cheers" || page==="users"||page==="work"||page==="manual" || page === "waiting") return;
 
     for (const branch of branches.filter(
       (item) =>
@@ -537,7 +539,7 @@ function App() {
     ["targets", "目標與轉介", LayoutDashboard],
     ...(canWrite ? [["waiting", "候補清單", Users]] : []),
     ...(canWrite ? [["work", "待辦事項", Check]] : []),
-    ...(global ? [["users", "帳號與權限", Users]] : []),
+    ...(global ? [["cheers", "信心喊話", Megaphone],["users", "帳號與權限", Users]] : []),
   ];
 
   return (
@@ -615,7 +617,17 @@ function App() {
             </strong>
           </div>
 
-          <div className="header-right">
+          <HeaderCheer
+         uid={user.uid}
+         branchId={
+          profile&&(global||["manager","employee"].includes(profile.role))?
+           (branchId!=="all"&&branches.some(b=>b.id===branchId&&!b.archived)?
+            branchId:
+            !global&&branches.filter(b=>!b.archived).length===1?
+             branches.find(b=>!b.archived)!.id:null
+           ):null
+         }
+        /><div className="header-right">
             <span className="live-dot" /> 即時同步
             <span className="date">
               {today().replaceAll("-", " / ")}
@@ -698,7 +710,7 @@ function App() {
                     )?.[1] as string}
                   </h1>
                   <p>
-                    {page==="manual"?"依頁面查看功能說明與操作步驟。":page==="dashboard"
+                    {page === "cheers" ? "為各據點設定最上方的鼓勵文字。" : page === "manual" ? "依頁面查看功能說明與操作步驟。":page==="dashboard"
                       ? "掌握每個據點的出租表現，讓營運決策更清楚。"
                       : page === "units"
                         ? "管理倉位現況，記錄每一次承租、續約與退租。"
@@ -710,7 +722,7 @@ function App() {
                   </p>
                 </div>
 
-                {page !== "users" && page !== "manual" && (
+                {page !== "cheers" && page !== "users" && page !== "manual" && (
                   <div className="filters">
                     <select
                       aria-label="選擇據點"
@@ -760,6 +772,7 @@ function App() {
               )}
 
               {page === "manual" && <OperationManual/>}
+{page === "cheers" && global && <BranchCheers branches={branches}/>}
               {page === "waiting" && canWrite && profile && <WaitingList profile={profile} branches={branches} branchId={branchId} state={waiting} focus={waitingFocus} onFocus={setWaitingFocus} onRent={rentWaitingUnit}/>}
 {page === "dashboard" && (
                 <>
