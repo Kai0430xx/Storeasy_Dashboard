@@ -27,7 +27,7 @@ jobs:
           node-version: '22'
 
       - name: Apply dashboard features
-        run: python3 scripts/add-operation-manual.py
+        run: python3 scripts/add-revenue-comparison.py
 
       - name: Install dependencies
         run: |
