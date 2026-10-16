@@ -1,6 +1,6 @@
 
 import {useEffect,useRef,useState} from 'react';
-import {doc,onSnapshot,runTransaction,serverTimestamp} from 'firebase/firestore';
+import {collection,doc,onSnapshot,runTransaction,serverTimestamp} from 'firebase/firestore';
 import {Megaphone} from 'lucide-react';
 import {auth,db} from './firebase';
 import './branch-cheers.css';
@@ -83,7 +83,30 @@ export default function BranchCheers({branches}:{branches:Row[]}){
  const [notice,setNotice]=useState('');
  const [reload,setReload]=useState(0);
 
- const dirty=useRef(false);
+ 
+ const [configured,setConfigured]=useState<Record<string,string>>({});
+ const [configuredReady,setConfiguredReady]=useState(false);
+ const [configuredError,setConfiguredError]=useState('');
+
+ useEffect(()=>onSnapshot(
+  collection(db,'branchCheers'),
+  snapshot=>{
+   setConfigured(Object.fromEntries(
+    snapshot.docs.map(d=>[d.id,d.data().text||''])
+   ));
+   setConfiguredReady(true);
+   setConfiguredError('');
+  },
+  e=>{
+   setConfiguredError(e.message);
+   setConfiguredReady(false);
+  }
+ ),[]);
+
+ const configuredBranches=available.filter(
+  b=>configured[b.id]?.trim()
+ );
+const dirty=useRef(false);
  const generation=useRef(0);
 
  useEffect(()=>{
@@ -182,8 +205,20 @@ export default function BranchCheers({branches}:{branches:Row[]}){
      {text.length}／200 字；留空儲存即可移除顯示。
     </p>
 
-    <div className="cheer-preview" aria-label="信心喊話預覽">
-     <CheerText text={text.trim()}/>
+    
+    <div className="cheer-preview-block">
+     <h3>頁面頂端預覽</h3>
+     <div
+      className={'cheer-preview'+(text.trim()?' has-text':'')}
+      aria-label="信心喊話預覽"
+     >
+      {text.trim()?
+       <CheerText text={text.trim()}/>:
+       <span className="cheer-preview-empty">
+        輸入文字後，這裡會顯示大聲公與喊話樣式。
+       </span>
+      }
+     </div>
     </div>
 
     {error&&
@@ -216,6 +251,45 @@ export default function BranchCheers({branches}:{branches:Row[]}){
      >清除喊話</button>
     </div>
    </form>
+
+   <section className="cheer-configured" aria-label="已設定的據點">
+    <h3>
+     已設定的據點
+     {configuredReady&&<span> {configuredBranches.length} 間</span>}
+    </h3>
+
+    {configuredError?
+     <p role="alert" className="alert error">
+      無法載入已設定清單：{configuredError}
+     </p>:
+     !configuredReady?<p>載入中…</p>:
+     !configuredBranches.length?
+      <p className="hint">目前沒有已設定喊話的據點。</p>:
+      <div className="cheer-configured-grid">
+       {configuredBranches.map(b=>
+        <article key={b.id}>
+         <div>
+          <strong>{b.name}</strong>
+          <button
+           type="button"
+           className="text-button"
+           aria-label={'編輯 '+b.name+' 信心喊話'}
+           disabled={busy}
+           onClick={()=>{
+            if(b.id!==id&&dirty.current&&!window.confirm(
+             '尚有未儲存的文字，確定切換據點？'
+            ))return;
+            setSelected(b.id);
+            window.scrollTo({top:0,behavior:'smooth'});
+           }}
+          >編輯</button>
+         </div>
+         <p>{configured[b.id]}</p>
+        </article>
+       )}
+      </div>
+    }
+   </section>
   </>}
  </section>;
 }

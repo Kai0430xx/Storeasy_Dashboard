@@ -404,8 +404,27 @@ function App() {
       branchName:branchSnapshot.data().name
      },
      eventMonth:today().slice(0,7),
-     waitingId:unit.waitingId
+     waitingId:unit.waitingId, waitingReturn:{branchId,month,search,status}
     });
+  }
+
+  function closeAppModal(){
+    if(busy)return;
+    const waitingId=modal?.kind==="event"&&modal.type==="new"?
+     modal.waitingId:null;
+    const context=modal?.waitingReturn;
+
+    setModal(null);
+    setError("");
+
+    if(waitingId){
+      setBranchId(context?.branchId||"all");
+      if(context?.month)setMonth(context.month);
+      setSearch(context?.search||"");
+      setStatus(context?.status||"all");
+      setWaitingFocus(waitingId);
+      setPage("waiting");
+    }
   }
   const stats = (targetMonth: string) => {
     const isCurrent = targetMonth === today().slice(0, 7);
@@ -1698,7 +1717,7 @@ function App() {
                 <button
                   disabled={busy}
                   aria-label="關閉"
-                  onClick={() => setModal(null)}
+                  onClick={closeAppModal}
                 >
                   <X />
                 </button>
