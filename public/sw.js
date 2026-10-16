@@ -112,7 +112,7 @@ self.addEventListener('push',event=>
           : '目前沒有未讀提醒。',
         tag,
         renotify:false,
-        silent:incoming.version<=old.version||
+        silent:incoming.silent===true||incoming.version<=old.version||
           value.count<old.count||value.count===0,
         icon:new URL(
           'icons/storeasy-icon.png?v=6adf06f11936',self.registration.scope

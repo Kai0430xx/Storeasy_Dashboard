@@ -51,6 +51,7 @@ export const vacancyKey = u => JSON.stringify([
 export function workUnread(tasks,reads,uid){
   const keys=[];
   for(const task of tasks){
+  if(task.deleted||task.purging)continue;
     const threads=[];
     for(const [thread,signals] of Object.entries(task.signals||{})){
       if(task.deleted&&thread!=='main')continue;

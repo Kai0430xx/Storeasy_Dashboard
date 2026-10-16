@@ -240,31 +240,49 @@ const beforeAfter=e=>[
   e.data?.before.data(),e.data?.after.data()
 ].filter(Boolean);
 
-export const notifyWork=onDocumentWritten(
-  'workTasks/{id}',async e=>{
-    const rows=beforeAfter(e);
-    const assigned=docs(
-      await db.collection('workTaskAccess')
-        .where('taskId','==',e.params.id).get()
-    ).filter(a=>a.active).map(a=>a.uid);
 
-    await audience(
-      (uid,p)=>rows.some(r=>
-        workNotificationVisible(r,uid,p,assigned.includes(uid))
-      ),
-      {work:true}
-    );
-  }
+export const notifyWork=onDocumentWritten(
+ 'workTasks/{id}',async e=>{
+  const rows=beforeAfter(e);
+  const assigned=docs(
+   await db.collection('workTaskAccess')
+    .where('taskId','==',e.params.id).get()
+  ).filter(a=>a.active).map(a=>a.uid);
+
+  const after=e.data?.after.data();
+  const log=after?.lastActionId
+   ? (await db.doc(
+      `workTasks/${e.params.id}/history/${after.lastActionId}`
+     ).get()).data()
+   : null;
+
+  await audience(
+   (uid,p)=>rows.some(r=>
+    workNotificationVisible(r,uid,p,assigned.includes(uid))
+   ),
+   {
+    work:true,
+    notify:!!after&&!after.deleted&&!after.purging&&
+     !['delete','itemDelete','messageDelete'].includes(log?.action)
+   }
+  );
+ }
 );
 
 export const notifyWorkAccess=onDocumentWritten(
-  'workTaskAccess/{id}',async e=>{
-    for(const uid of new Set(beforeAfter(e).map(d=>d.uid))){
-      if(uid)await enqueueRegistered(uid,{work:true});
-    }
-  }
-);
+ 'workTaskAccess/{id}',async e=>{
+  const before=e.data?.before.data();
+  const after=e.data?.after.data();
+  const notify=!!after?.active&&
+   (after.sources||[]).some(
+    source=>!(before?.sources||[]).includes(source)
+   );
 
+  for(const uid of new Set(beforeAfter(e).map(d=>d.uid))){
+   if(uid)await enqueueRegistered(uid,{work:true,notify});
+  }
+ }
+);
 export const notifyWorkRead=onDocumentWritten(
   'workReads/{id}',async e=>{
     const uid=e.data?.after.data()?.uid||
@@ -273,16 +291,22 @@ export const notifyWorkRead=onDocumentWritten(
   }
 );
 
-export const notifyWaiting=onDocumentWritten(
-  'waitingList/{id}',async e=>{
-    const rows=beforeAfter(e);
-    await audience(
-      (uid,p)=>rows.some(r=>waitingNotificationVisible(r,uid,p)),
-      {waiting:true}
-    );
-  }
-);
 
+export const notifyWaiting=onDocumentWritten(
+ 'waitingList/{id}',async e=>{
+  const rows=beforeAfter(e);
+  const after=e.data?.after.data();
+
+  await audience(
+   (uid,p)=>rows.some(r=>waitingNotificationVisible(r,uid,p)),
+   {
+    waiting:true,
+    notify:!!after&&!after.deleting&&
+     ['waiting','contacted','visit'].includes(after.status)
+   }
+  );
+ }
+);
 export const notifyWaitingRead=onDocumentWritten(
   'waitingReads/{uid}/items/{id}',
   e=>enqueueRegistered(e.params.uid,{waiting:true})
@@ -294,7 +318,7 @@ export const notifyStock=onDocumentWritten(
     if(branch?.importing)return;
     await audience(
       (uid,p)=>(enabled(p)&&(p.branchIds||[]).length>0),
-      {waiting:true},Date.parse(e.time)||Date.now()
+      {waiting:true,notify:true},Date.parse(e.time)||Date.now()
     );
   }
 );
@@ -306,7 +330,7 @@ export const notifyBranch=onDocumentWritten(
        JSON.stringify([b?.archived,!!b?.importing])){
       await audience(
         (uid,p)=>(enabled(p)&&(p.branchIds||[]).length>0),
-        {waiting:true},Date.parse(e.time)||Date.now()
+        {waiting:true,notify:true},Date.parse(e.time)||Date.now()
       );
     }
   }
@@ -318,7 +342,7 @@ export const notifyDirectory=onDocumentWritten(
        e.data?.after.data()?.archived){
       await audience(
         (uid,p)=>(enabled(p)&&(p.branchIds||[]).length>0),
-        {waiting:true},Date.parse(e.time)||Date.now()
+        {waiting:true,notify:true},Date.parse(e.time)||Date.now()
       );
     }
   }
@@ -337,7 +361,7 @@ export const notifyUser=onDocumentWritten(
 export const pushExpiryTick=onSchedule({
   schedule:'0 0 * * *',timeZone:'Asia/Taipei'
 },()=>audience(
-  (uid,p)=>(enabled(p)&&(p.branchIds||[]).length>0),{waiting:true}
+  (uid,p)=>(enabled(p)&&(p.branchIds||[]).length>0),{waiting:true,notify:true}
 ));
 
 // own-notification-branches-v1

@@ -1,5 +1,5 @@
 import {useEffect,useState} from 'react';
-import {collection,doc,query,where,onSnapshot,runTransaction,serverTimestamp,Timestamp,orderBy,limit,getDocs} from 'firebase/firestore';
+import {collection,doc,query,where,onSnapshot,runTransaction,serverTimestamp,Timestamp,orderBy,limit,getDocs,getDocFromServer} from 'firebase/firestore';
 import {auth,db} from './firebase';
 export type WorkRow=Record<string,any>;
 export const workRoles=['admin','supervisor','manager'];
@@ -14,6 +14,7 @@ export function workError(error:any):string {
 }
 export const stamp=(v:any):number=>v?.toMillis?.()||0;
 export function unreadThreads(task:WorkRow,receipt?:WorkRow,uid=auth.currentUser?.uid){
+ if(task.deleted||task.purging)return [];
  return Object.keys(task.signals||{}).filter(thread=>Object.entries(task.signals[thread]).some(([actor,time])=>actor!==uid&&stamp(time)>stamp(receipt?.seen?.[thread])));
 }
 export function useWorkTasks(profile:WorkRow|null){
@@ -34,7 +35,7 @@ export function useWorkTasks(profile:WorkRow|null){
    stops.push(onSnapshot(query(collection(db,'workTaskAccess'),where('uid','==',uid)),snapshot=>{
     const active=new Set(snapshot.docs.filter(d=>d.data().active).map(d=>String(d.data().taskId)));
     for(const [id,stop] of watchers)if(!active.has(id)){stop();watchers.delete(id);assigned.delete(id);}
-    for(const id of active)if(!watchers.has(id))watchers.set(id,onSnapshot(doc(db,'workTasks',id),snapshot=>{if(snapshot.exists())assigned.set(id,{id,...snapshot.data()});else assigned.delete(id);publish();},e=>{assigned.delete(id);publish();setError(workError(e));}));
+    for(const id of active)if(!watchers.has(id))watchers.set(id,onSnapshot(doc(db,'workTasks',id),snapshot=>{if(snapshot.exists())assigned.set(id,{id,...snapshot.data()});else assigned.delete(id);publish();},e=>{const previous=assigned.get(id)||{id};assigned.delete(id);publish();void workReadEnded(previous,profile,e).then(ended=>{if(!ended)setError(workError(e));});}));
     publish();
    },e=>setError(workError(e))));
    stops.push(()=>watchers.forEach(stop=>stop()));
@@ -43,7 +44,8 @@ export function useWorkTasks(profile:WorkRow|null){
   stops.push(onSnapshot(query(collection(db,'workReads'),where('uid','==',uid)),s=>setReads(Object.fromEntries(s.docs.map(d=>[d.data().taskId,d.data()]))),e=>setError(workError(e))));
   return()=>stops.forEach(s=>s());
  },[uid,profile?.role,JSON.stringify(profile?.branchIds),reconnect]);
- return {tasks,reads,error,retry:()=>{setError('');setReconnect(n=>n+1);},hasUnread:tasks.some(t=>unreadThreads(t,reads[t.id]).some(thread=>!t.deleted||thread==='main'))};
+ const notificationTasks=useLiveNotificationThreads(tasks,reads,uid,profile);
+ return {tasks:notificationTasks,reads,error,retry:()=>{setError('');setReconnect(n=>n+1);},hasUnread:tasks.some(t=>unreadThreads(t,reads[t.id]).some(thread=>!t.deleted||thread==='main'))};
 }
 function actor(profile:WorkRow){if(!auth.currentUser)throw new Error('請重新登入');return {uid:auth.currentUser.uid,name:profile.username||'未命名帳號'};}
 function fields(input:WorkRow){
@@ -154,3 +156,98 @@ export async function loadWorkHistory(taskId:string){return (await getDocs(query
 // storeasy-work-team-v1
 
 // storeasy-work-categories-v1
+
+// work-delete-read-race-v1
+export async function workReadEnded(
+ task:WorkRow,profile:WorkRow,error:any,thread='main'
+){
+ if(!String(error?.code||'').includes('permission-denied')){
+  return false;
+ }
+
+ try{
+  const latest=await getDocFromServer(doc(db,'workTasks',task.id));
+  if(!latest.exists()||latest.data().deleted||latest.data().purging){
+   return true;
+  }
+
+  if(thread!=='main'){
+   const item=await getDocFromServer(
+    doc(db,'workTasks',task.id,'items',thread)
+   );
+   return !item.exists()||!!item.data().deleted;
+  }
+  return false;
+ }catch{
+  const uid=auth.currentUser?.uid;
+  if(!uid||
+     ['admin','supervisor'].includes(profile.role)||
+     task.createdBy===uid||
+     (task.branchIds||[]).some(
+      (id:string)=>(profile.branchIds||[]).includes(id)
+     )){
+   return false;
+  }
+
+  try{
+   const access=await getDocFromServer(
+    doc(db,'workTaskAccess',uid+'_'+task.id)
+   );
+   return !access.exists()||!access.data().active;
+  }catch{
+   return false;
+  }
+ }
+}
+
+function useLiveNotificationThreads(
+ tasks:WorkRow[],
+ reads:Record<string,WorkRow>,
+ uid:string|undefined,
+ profile:WorkRow|null
+):WorkRow[]{
+ const [hidden,setHidden]=useState<Set<string>>(new Set());
+ const key=JSON.stringify(
+  tasks.map(t=>[t.id,t.revision,t.deleted,t.signals,reads[t.id]?.seen])
+ );
+
+ useEffect(()=>{
+  let active=true;
+  const candidates=tasks
+   .filter(t=>!t.deleted&&!t.purging)
+   .flatMap(task=>
+    unreadThreads(task,reads[task.id],uid)
+     .filter(thread=>thread!=='main')
+     .map(thread=>({task,thread}))
+   );
+
+  void Promise.all(candidates.map(async({task,thread})=>{
+   try{
+    const s=await getDocFromServer(
+     doc(db,'workTasks',task.id,'items',thread)
+    );
+    return !s.exists()||s.data().deleted
+     ? task.id+':'+thread
+     : null;
+   }catch(e){
+    return profile&&await workReadEnded(task,profile,e,thread)
+     ? task.id+':'+thread
+     : null;
+   }
+  })).then(keys=>{
+   if(active){
+    setHidden(new Set(keys.filter((k):k is string=>!!k)));
+   }
+  });
+
+  return()=>{active=false;};
+ },[key,uid,profile?.role,JSON.stringify(profile?.branchIds)]);
+
+ return tasks.map(task=>({
+  ...task,
+  signals:Object.fromEntries(
+   Object.entries(task.signals||{})
+    .filter(([thread])=>!hidden.has(task.id+':'+thread))
+  )
+ }));
+}

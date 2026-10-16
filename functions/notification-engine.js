@@ -103,7 +103,37 @@ export function createNotificationEngine({db,keys,site,send}){
         .map(r=>[r.taskId,r])
     );
 
-    return workUnread([...map.values()],reads,uid);
+    
+const live=[...map.values()]
+ .filter(t=>!t.deleted&&!t.purging)
+ .map(t=>({...t,signals:{...t.signals}}));
+
+const children=live.flatMap(task=>
+ Object.keys(task.signals||{})
+  .filter(thread=>
+   thread!=='main'&&
+   workUnread(
+    [{...task,signals:{[thread]:task.signals[thread]}}],
+    reads,uid
+   ).count>0
+  )
+  .map(thread=>({task,thread}))
+);
+
+for(const group of chunks(children,100)){
+ const snapshots=await db.getAll(
+  ...group.map(({task,thread})=>
+   db.doc(`workTasks/${task.id}/items/${thread}`)
+  )
+ );
+ snapshots.forEach((s,i)=>{
+  if(!s.exists||s.data().deleted){
+   delete group[i].task.signals[group[i].thread];
+  }
+ });
+}
+return workUnread(live,reads,uid);
+
   }
 
   async function loadWaiting(uid,p,epoch){
@@ -246,7 +276,7 @@ export function createNotificationEngine({db,keys,site,send}){
                 binding:d.binding,
                 version,
                 count:state.count,
-                enabled:active,
+                enabled:active,silent:!q.notify,
                 page:state.workCount?'work':'waiting',
                 url:url.href
               }),
