@@ -27,7 +27,7 @@ jobs:
           node-version: '22'
 
       - name: Apply dashboard features
-        run: python3 scripts/tidy-cheers-and-waiting-return.py
+        run: python3 scripts/tidy-cheers-store-rows.py
         
       - name: Install dependencies
         run: |
