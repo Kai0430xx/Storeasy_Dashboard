@@ -115,7 +115,7 @@ self.addEventListener('push',event=>
         silent:incoming.version<=old.version||
           value.count<old.count||value.count===0,
         icon:new URL(
-          'icons/app-192.png',self.registration.scope
+          'icons/storeasy-icon.png?v=6adf06f11936',self.registration.scope
         ).href,
         data:{
           url:target.href,
@@ -166,7 +166,7 @@ self.addEventListener('pushsubscriptionchange',event=>
         body:'請開啟網頁的通知設定，重新啟用此裝置通知。',
         tag,
         icon:new URL(
-          'icons/app-192.png',self.registration.scope
+          'icons/storeasy-icon.png?v=6adf06f11936',self.registration.scope
         ).href,
         data:{
           url:self.registration.scope,

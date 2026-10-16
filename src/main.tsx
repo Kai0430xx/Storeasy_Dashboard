@@ -1,4 +1,6 @@
-import NotificationCenter from "./NotificationCenter";
+import useInitialBranch from "./use-initial-branch";
+import OwnNotificationBranches from "./OwnNotificationBranches";
+import HeaderAlerts from "./HeaderAlerts";
 import {logoutNotifications} from "./push-client";
 import BranchCheers,{HeaderCheer} from "./BranchCheers";
 import {Megaphone} from "lucide-react";
@@ -71,6 +73,7 @@ import {BookOpen,
 } from "lucide-react";
 import { auth, db, call, loginEmail } from "./firebase";
 import "./style.css";
+import "./mobile-layout.css";
 
 type Row = Record<string, any>;
 
@@ -115,6 +118,7 @@ const friendly = (error: any) => {
 };
 
 function App() {
+ const [workFocus,setWorkFocus]=useState<any>(null);
   const [unitSort, setUnitSort] = useState("code");
   const [currentDate, setCurrentDate] = useState(today());
   useEffect(() => {
@@ -147,6 +151,7 @@ function App() {
 
   const [loadAllUnits,setLoadAllUnits]=useState(false);
   const branches = [...branchRows].sort(compareBranches);
+ const initialBranchReady=useInitialBranch(user?.uid,profile,branches,setBranchId);
   const work = useWorkTasks(profile);
   const waiting = useWaitingList(profile,branches,page === "waiting" || page === "units");
   const [waitingFocus,setWaitingFocus] = useState<string|null>(null);
@@ -260,6 +265,7 @@ function App() {
     setData({});
     const stops: (() => void)[] = [];
     if (page === "cheers" || page==="users"||page==="work"||page==="manual" || page === "waiting") return;
+ if(!initialBranchReady)return;
 
     for (const branch of branches.filter(
       (item) =>
@@ -309,7 +315,7 @@ function App() {
     }
 
     return () => stops.forEach((stop) => stop());
-  }, [
+  }, [initialBranchReady, 
     branches.map((branch) => branch.id).sort().join(","),
     branchId,
     page,
@@ -565,7 +571,7 @@ function App() {
 
   return (
     <div className="app">
-      <aside className={mobile ? "sidebar open" : "sidebar"}>
+      {mobile&&<button className="mobile-sidebar-backdrop" aria-label="關閉側邊選單" onClick={()=>setMobile(false)}/>}<aside className={mobile ? "sidebar open" : "sidebar"}><button type="button" className="mobile-sidebar-close" aria-label="收合選單" onClick={()=>setMobile(false)}><X size={22}/>收合</button>
         <div className="brand">
           <div className="brand-icon">
             <Warehouse size={25} />
@@ -649,7 +655,7 @@ function App() {
            ):null
          }
         /><div className="header-right">
-            {canWrite&&profile&&<NotificationCenter uid={user.uid} role={profile.role}/>}
+            {canWrite&&profile&&<HeaderAlerts uid={user.uid} branches={branches} profile={profile} work={work} waiting={waiting} onWaiting={(row:any)=>{setBranchId("all");setWaitingFocus(row.id);setPage("waiting");}} onWork={(task:any,thread:string)=>{setBranchId("all");setWorkFocus({id:task.id,thread,nonce:Date.now()});setPage("work");}}/>}
 <span className="live-dot" /> 即時同步
             <span className="date">
               {today().replaceAll("-", " / ")}
@@ -1086,7 +1092,7 @@ function App() {
                 />
                 <LightInsights branches={visible} events={events} month={month} />
               </>}
-              {page === "work" && canWrite && <WorkTasks profile={profile} directoryBranches={branches} branches={branches.filter(b=>!b.archived)} branchId={branchId} peopleUsers={users} onSelectBranch={setBranchId} {...work} />}
+              {page === "work" && canWrite && <WorkTasks focus={workFocus} onFocus={()=>setWorkFocus(null)} profile={profile} directoryBranches={branches} branches={branches.filter(b=>!b.archived)} branchId={branchId} peopleUsers={users} onSelectBranch={setBranchId} {...work} />}
               {page === "targets" && <Targets
                 branches={branches.filter(b=>!b.archived && (branchId === "all" || b.id === branchId))}
                 month={month}
@@ -1573,7 +1579,7 @@ function App() {
               )}
 
               {page === "users" && global && (
-                <>
+                <><section className="panel personal-notification-settings"><h2>我的負責據點</h2><OwnNotificationBranches uid={user.uid}/></section>
                   <div className="toolbar">
                     <div className="hint">
                       新註冊帳號：
@@ -2091,7 +2097,7 @@ function App() {
 
                 <fieldset>
                   <legend>
-                    指派據點（店長與員工適用）
+                    指派據點（主管／管理員的候補通知負責據點）
                   </legend>
                   {branches.map((branch) => (
                     <label

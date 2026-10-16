@@ -293,7 +293,7 @@ export const notifyStock=onDocumentWritten(
     const branch=(await db.doc('branches/'+e.params.id).get()).data();
     if(branch?.importing)return;
     await audience(
-      (uid,p)=>p?.role==='manager',
+      (uid,p)=>(enabled(p)&&(p.branchIds||[]).length>0),
       {waiting:true},Date.parse(e.time)||Date.now()
     );
   }
@@ -305,7 +305,7 @@ export const notifyBranch=onDocumentWritten(
     if(JSON.stringify([a?.archived,!!a?.importing])!==
        JSON.stringify([b?.archived,!!b?.importing])){
       await audience(
-        (uid,p)=>p?.role==='manager',
+        (uid,p)=>(enabled(p)&&(p.branchIds||[]).length>0),
         {waiting:true},Date.parse(e.time)||Date.now()
       );
     }
@@ -317,7 +317,7 @@ export const notifyDirectory=onDocumentWritten(
     if(e.data?.before.data()?.archived!==
        e.data?.after.data()?.archived){
       await audience(
-        (uid,p)=>p?.role==='manager',
+        (uid,p)=>(enabled(p)&&(p.branchIds||[]).length>0),
         {waiting:true},Date.parse(e.time)||Date.now()
       );
     }
@@ -337,5 +337,47 @@ export const notifyUser=onDocumentWritten(
 export const pushExpiryTick=onSchedule({
   schedule:'0 0 * * *',timeZone:'Asia/Taipei'
 },()=>audience(
-  (uid,p)=>p?.role==='manager',{waiting:true}
+  (uid,p)=>(enabled(p)&&(p.branchIds||[]).length>0),{waiting:true}
 ));
+
+// own-notification-branches-v1
+
+export const pushOwnBranches=onCall(async request=>{
+ const {uid}=await actor(request);
+ originCheck(request);
+
+ const raw=request.data?.branchIds;
+ if(!Array.isArray(raw)||raw.length>100||
+    raw.some(id=>typeof id!=='string'||!id||id.includes('/'))){
+  throw new HttpsError('invalid-argument','據點選擇不正確');
+ }
+
+ const branchIds=[...new Set(raw)];
+
+ await db.runTransaction(async tx=>{
+  const profile=await tx.get(db.doc('users/'+uid));
+
+  if(!['admin','supervisor'].includes(profile.data()?.role)){
+   throw new HttpsError(
+    'permission-denied',
+    '只有主管與管理員可以設定自己的負責據點'
+   );
+  }
+
+  for(const id of branchIds){
+   const b=await tx.get(db.doc('branches/'+id));
+   if(!b.exists||b.data().archived){
+    throw new HttpsError(
+     'failed-precondition','據點已停用或不存在，請重新選擇'
+    );
+   }
+  }
+
+  tx.update(profile.ref,{
+   branchIds,updatedBy:uid,updatedAt:timestamp()
+  });
+ });
+
+ await enqueueRegistered(uid);
+ return {branchIds};
+});

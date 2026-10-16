@@ -202,3 +202,5 @@ onAuthStateChanged(auth,user=>{
     void disableLocalPush().catch(()=>{});
   }
 });
+
+export const saveOwnNotificationBranches=(branchIds:string[])=>rpc('pushOwnBranches',{branchIds});

@@ -37,7 +37,7 @@ export const workNotificationVisible = (
 );
 
 export const waitingNotificationVisible = (row,uid,p) =>
-  p?.role==='manager'&&intersects(row.branchIds,p.branchIds);
+  enabled(p)&&intersects(row.branchIds,p.branchIds);
 
 export const calendarDate = s =>
   /^20\d{2}-\d{2}-\d{2}$/.test(s||'')&&

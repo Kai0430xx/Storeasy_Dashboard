@@ -1,31 +1,52 @@
 
 .notification-settings-button {
-  position:relative;
-  display:inline-flex;
-  align-items:center;
-  padding:5px;
+ position:relative;align-items:center;padding:5px;display:none;
 }
 .notification-settings-button > span {
-  position:absolute;
-  top:-6px;
-  right:-7px;
-  min-width:16px;
-  padding:1px 4px;
-  border-radius:10px;
-  background:#d42036;
-  color:white;
-  font-size:10px;
-  line-height:14px;
+ position:absolute;top:-6px;right:-7px;min-width:16px;
+ padding:1px 4px;border-radius:10px;background:#d42036;
+ color:white;font-size:10px;line-height:14px;
 }
-.notification-modal p { line-height:1.7; }
+.notification-modal p {line-height:1.7;}
 .notification-state {
-  padding:12px;
-  background:#f3f6fb;
-  border-radius:8px;
+ padding:12px;background:#f3f6fb;border-radius:8px;
 }
 .notification-actions {
-  display:flex;
-  flex-wrap:wrap;
-  gap:12px;
-  margin-top:20px;
+ display:flex;flex-wrap:wrap;gap:12px;margin-top:20px;
+}
+.notification-own-branches {
+ margin:18px 0;padding:14px;min-width:0;
+ border:1px solid #dce3eb;border-radius:8px;
+}
+.notification-own-branches details {
+ margin:12px 0;border:1px solid #dce3eb;
+ border-radius:8px;padding:10px;
+}
+.notification-own-branches summary {cursor:pointer;}
+.notification-own-branches details > div {
+ max-height:230px;overflow-y:auto;margin-top:10px;
+}
+.notification-own-branches label {
+ display:flex;flex-direction:row;align-items:center;
+ gap:10px;padding:8px 0;margin:0;
+}
+.notification-own-branches input[type=checkbox] {
+ width:20px;height:20px;flex:0 0 20px;
+}
+.notification-inbox {
+ margin-bottom:20px;padding-bottom:16px;
+ border-bottom:1px solid #dce3eb;
+}
+.notification-inbox-row {
+ display:flex;flex-direction:column;width:100%;
+ align-items:flex-start;gap:6px;text-align:left;
+ padding:14px 10px;border-bottom:1px solid #e6ebf1;
+ border-radius:0;overflow-wrap:anywhere;
+}
+.notification-inbox-row span {font-size:13px;color:#647692;}
+.notification-owned-summary {overflow-wrap:anywhere;}
+.mobile-sidebar-close,.mobile-sidebar-backdrop {display:none;}
+.personal-notification-settings {padding:22px;margin-bottom:20px;}
+@media(max-width:760px){
+ .notification-settings-button {display:inline-flex;}
 }

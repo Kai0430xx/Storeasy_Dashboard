@@ -107,7 +107,7 @@ export function createNotificationEngine({db,keys,site,send}){
   }
 
   async function loadWaiting(uid,p,epoch){
-    if(p.role!=='manager')return {count:0,keys:[]};
+    if(!enabled(p)||!(p.branchIds||[]).length)return {count:0,keys:[]};
 
     const map=new Map();
     const add=s=>docs(s).forEach(d=>map.set(d.id,d));

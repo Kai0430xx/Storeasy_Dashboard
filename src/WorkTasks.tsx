@@ -14,7 +14,7 @@ const dot=<span className="work-dot" aria-label="有未讀變動"/>;
 const empty={category:'其它',title:'',description:'',assignee:'',directAssigneeIds:[],due:'',priority:'normal'};
 function Dialog({title,onClose,children}:any){const ref=useRef<HTMLDivElement>(null),close=useRef(onClose);close.current=onClose;useEffect(()=>{const old=document.activeElement as HTMLElement;const body=document.body.style.overflow;document.body.style.overflow='hidden';ref.current?.querySelector<HTMLElement>('input,textarea,button')?.focus();const key=(e:KeyboardEvent)=>{if(e.key==='Escape')close.current();if(e.key==='Tab'){const els=Array.from(ref.current?.querySelectorAll<HTMLElement>('button,input,textarea,select,[tabindex="0"]')||[]).filter(x=>!x.hasAttribute('disabled'));if(!els.length)return;if(e.shiftKey&&document.activeElement===els[0]){e.preventDefault();els.at(-1)?.focus();}else if(!e.shiftKey&&document.activeElement===els.at(-1)){e.preventDefault();els[0].focus();}}};document.addEventListener('keydown',key);return()=>{document.body.style.overflow=body;document.removeEventListener('keydown',key);old?.focus();};},[]);return <div className="modal-backdrop"><div className="modal wide work-dialog" ref={ref} role="dialog" aria-modal="true" aria-label={title}><div className="work-toolbar modal-heading"><h2>{title}</h2><button type="button" onClick={onClose} aria-label="關閉">×</button></div>{children}</div></div>;}
 function Fields({value,onChange,people,categories,showCategory}:any){return <>{showCategory&&<label>分類<select aria-label="事項分類" value={value.category||'其它'} onChange={e=>onChange({...value,category:e.target.value})}>{categories.map((name:string)=><option key={name} value={name}>{name}</option>)}</select></label>}<label>標題<input required maxLength={120} value={value.title} onChange={e=>onChange({...value,title:e.target.value})}/></label><label>內容說明<textarea rows={3} maxLength={5000} value={value.description} onChange={e=>onChange({...value,description:e.target.value})}/></label><div className="work-fields"><div className="work-assignee-field"><div>指派對象（選填，可多選）</div><details className="work-assignee-picker"><summary>{value.directAssigneeIds?.length?`已指派 ${value.directAssigneeIds.length} 人`:'不指定'}</summary><button type="button" className="text-button" onClick={()=>onChange({...value,assignee:'',directAssigneeIds:[]})}>不指定／清除選擇</button><div className="work-assignee-options">{people.map((p:WorkRow)=><label key={p.id}><input type="checkbox" checked={(value.directAssigneeIds||[]).includes(p.id)} onChange={e=>onChange({...value,assignee:'',directAssigneeIds:e.target.checked?[...(value.directAssigneeIds||[]),p.id]:(value.directAssigneeIds||[]).filter((id:string)=>id!==p.id)})}/><span>{p.username}</span></label>)}</div></details></div><label>預計完成日（選填）<input type="date" value={value.due} onChange={e=>onChange({...value,due:e.target.value})}/></label><label>優先程度<select value={value.priority} onChange={e=>onChange({...value,priority:e.target.value})}><option value="normal">一般</option><option value="urgent">緊急</option></select></label></div></>;}
-export default function WorkTasks({profile,branches,directoryBranches=branches,branchId,tasks,reads,error:loadError,retry,peopleUsers=[],onSelectBranch}:any){
+export default function WorkTasks({focus,onFocus,profile,branches,directoryBranches=branches,branchId,tasks,reads,error:loadError,retry,peopleUsers=[],onSelectBranch}:any){
  const global=['admin','supervisor'].includes(profile.role),uid=auth.currentUser?.uid;
  const people=useWorkPeople(profile,peopleUsers);
  const directory=useWorkBranches(profile,directoryBranches);
@@ -27,6 +27,18 @@ export default function WorkTasks({profile,branches,directoryBranches=branches,b
  const historyCursor=useRef<any>(null);const [historyMore,setHistoryMore]=useState(false);const end=useRef<HTMLDivElement>(null);
  const assignedNames=(node:WorkRow)=>{const names=(node.directAssigneeIds||[]).map((id:string)=>people.options.find(p=>p.id===id)?.username||'已停用帳號');return names.length?names.join('、'):node.assignee||'';};
  const task=tasks.find((t:WorkRow)=>t.id===selected);
+ useEffect(()=>{
+  if(!focus)return;
+  const target=tasks.find((t:WorkRow)=>t.id===focus.id);
+  if(!target)return;
+  setCategory('all');setSearch('');setPerson('');
+  setOnlyUnread(false);setOnlyOverdue(false);
+  setMode(target.deleted?'trash':target.done?'done':'open');
+  setSelected(target.id);
+  setThread(focus.thread||'main');
+  onFocus?.();
+ },[focus?.nonce,tasks]);
+
  const filtered=tasks.filter((t:WorkRow)=>(branchId==='all'||t.branchIds.includes(branchId))&&(mode==='trash'?global&&t.deleted:!t.deleted&&(mode==='done'?t.done:!t.done))&&(!search||`${t.title} ${t.description}`.includes(search))&&(!person||[...(t.directAssigneeIds||[]).map((id:string)=>people.options.find(p=>p.id===id)?.username||''),t.assignee||''].some(name=>name.includes(person)))&&(!onlyUnread||unreadThreads(t,reads[t.id]).length>0)&&(!onlyOverdue||(!t.done&&t.due&&t.due<day()))).sort((a:WorkRow,b:WorkRow)=>Number(unreadThreads(b,reads[b.id]).length>0)-Number(unreadThreads(a,reads[a.id]).length>0)||Number(b.priority==='urgent')-Number(a.priority==='urgent')||stamp(b.updatedAt)-stamp(a.updatedAt));
  const visible=filtered.filter((t:WorkRow)=>category==='all'||(t.category||'其它')===category);
  const item=thread==='main'?task:items.find(t=>t.id===thread);

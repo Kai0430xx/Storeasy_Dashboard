@@ -52,3 +52,7 @@ Eventarc service agent 尚未就緒時，等建立完成再重試同一部署指
 後續修改 Functions 仍須重新 deploy；只更新 Pages 不會更新背景服務。
 佇列即時處理，未完成工作由每分鐘排程補處理，
 候補到期於台灣時間午夜重新計算。
+
+
+<!-- mobile-notification-update-v1 -->
+主管與管理員也接收自己負責據點的候補配對及到期提醒。電腦到「帳號與權限 → 我的負責據點」設定；手機從鈴鐺設定。電腦不顯示鈴鐺。這次背景條件修改須重新部署 functions:notifications，不需重建金鑰。
