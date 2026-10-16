@@ -1,3 +1,4 @@
+import WaitingMatches from "./WaitingMatches";
 import {WaitingDateFields,WaitingStatus} from "./WaitingFields";
 import WaitingNotes from "./WaitingNotes";
 import {activeWaiting,displayWaitingDate,waitingStatusLabels} from "./waiting-domain.js";
@@ -52,7 +53,7 @@ export default function WaitingList({profile,branches,branchId,state,focus,onFoc
    <WaitingStatus value={row.status} busy={busy||!!row.deleting} onChange={next=>status(row,next)}/>
    <WaitingNotes rowId={row.id} legacy={row.note} disabled={!!row.deleting}/>
    
-   <h3>合適空倉</h3>{!activeWaiting(row)?<p>這筆紀錄已停止配對。</p>:<><p className="hint">依材積與月租範圍比對；需求時間供店長確認，不保證預留至該日期。</p><div className="table-wrap"><table><thead><tr><th>據點</th><th>倉號</th><th>材積</th><th>月租</th></tr></thead><tbody>{(state.matches[row.id]||[]).map((u:Row)=><tr key={u.branchId+'/'+u.code}><td>{names.get(u.branchId)||u.branchId}</td><td>{u.code}</td><td>{u.volume}</td><td>NT$ {u.price.toLocaleString('zh-TW')}</td></tr>)}</tbody></table></div>{!state.matches[row.id]?.length&&<p>目前沒有符合的空倉；其它據點僅記錄，不自動配對。</p>}</>}
+   <WaitingMatches key={row.id} active={activeWaiting(row)} units={state.matches[row.id]||[]} branchIds={row.branchIds} names={names}/>
    <div className="toolbar"><button className="secondary" disabled={busy||!!row.deleting} onClick={()=>startEdit(row)}>編輯</button><button className="text-button danger" disabled={busy} onClick={()=>remove(row)}>{row.deleting?"重試刪除":"刪除"}</button></div>
   </section></div>}
   {edit&&<div className="modal-backdrop"><section className="modal wide waiting-editor" role="dialog" aria-modal="true" aria-label={edit.id?'編輯候補':'新增候補'}><div className="modal-heading"><h2>{edit.id?'編輯候補':'新增候補'}</h2><button aria-label="關閉" disabled={busy} onClick={()=>setEdit(null)}><X size={20}/></button></div><form onSubmit={save}><fieldset disabled={busy} className="waiting-form">
