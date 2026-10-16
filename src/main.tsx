@@ -1,3 +1,4 @@
+import OperationManual from "./OperationManual";
 import {activityCategories,activityMatches} from "./activity-categories.js";
 import SearchInput from "./SearchInput";
 import {PendingEdit,PendingRenewals,usePendingRenewals} from "./PendingRenewals";
@@ -36,7 +37,7 @@ import {
   where,
   documentId,
 } from "firebase/firestore";
-import {
+import {BookOpen,
   LayoutDashboard,
   Warehouse,
   Tags,
@@ -244,7 +245,7 @@ function App() {
   useEffect(() => {
     setData({});
     const stops: (() => void)[] = [];
-    if (page === "users" || page === "work") return;
+    if(page==="users"||page==="work"||page==="manual")return;
 
     for (const branch of branches.filter(
       (item) =>
@@ -466,7 +467,7 @@ function App() {
     );
   }
 
-  const tabs = [
+  const tabs = [["manual","操作手冊",BookOpen],
     ["dashboard", "營運總覽", LayoutDashboard],
     ["units", "倉位管理", Warehouse],
     ["activities", "活動優惠", Tags],
@@ -492,7 +493,7 @@ function App() {
         <div className="nav-caption">營運管理平台</div>
 
         <nav>
-          {tabs.map(([id, label, Icon]: any) => (
+          {tabs.filter(tab=>tab[0]!=="manual").map(([id, label, Icon]: any) => (
             <button
               key={id}
               className={page === id ? "active" : ""}
@@ -512,7 +513,12 @@ function App() {
           ))}
         </nav>
 
-        <div className="sidebar-foot">
+        <div className="sidebar-manual">
+ <button type="button" className={page==="manual"?"active":""}
+  onClick={()=>{setPage("manual");setMobile(false);}}>
+  <BookOpen size={19}/>操作手冊
+ </button>
+</div><div className="sidebar-foot">
           <div className="avatar">
             {profile?.username?.slice(0, 1) || "S"}
           </div>
@@ -607,7 +613,7 @@ function App() {
                 </button>
               </form>
             </section>
-          ) : profile.role === "pending" ? (
+          ) : profile.role === "pending" && page !== "manual" ? (
             <section className="panel empty">
               <Users size={48} />
               <h2>帳號已註冊，等待指派據點</h2>
@@ -628,7 +634,7 @@ function App() {
                     )?.[1] as string}
                   </h1>
                   <p>
-                    {page === "dashboard"
+                    {page==="manual"?"依頁面查看功能說明與操作步驟。":page==="dashboard"
                       ? "掌握每個據點的出租表現，讓營運決策更清楚。"
                       : page === "units"
                         ? "管理倉位現況，記錄每一次承租、續約與退租。"
@@ -640,7 +646,7 @@ function App() {
                   </p>
                 </div>
 
-                {page !== "users" && (
+                {page !== "users" && page !== "manual" && (
                   <div className="filters">
                     <select
                       aria-label="選擇據點"
@@ -680,7 +686,7 @@ function App() {
                 )}
               </div>
 
-              {visible.some((branch) =>
+              {page !== "manual" && visible.some((branch) =>
                 branch.importing,
               ) && (
                 <div className="alert error">
@@ -689,7 +695,8 @@ function App() {
                 </div>
               )}
 
-              {page === "dashboard" && (
+              {page === "manual" && <OperationManual/>}
+{page === "dashboard" && (
                 <>
                   <div className="section-label">
                     <span>營運指標</span>
