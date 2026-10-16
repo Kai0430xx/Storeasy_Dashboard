@@ -1,0 +1,23 @@
+
+.goal-disclosure {
+  margin:16px 0;
+  border:1px solid #dae3ed;
+  border-radius:8px;
+}
+.goal-disclosure > summary {
+  padding:16px;
+  font-size:18px;
+  font-weight:600;
+  cursor:pointer;
+}
+.goal-disclosure > summary:focus-visible {
+  outline:2px solid #204b80;
+  outline-offset:-3px;
+  border-radius:8px;
+}
+.goal-disclosure-content {
+  padding:0 16px 16px;
+}
+.goal-disclosure-content > h3 {
+  display:none;
+}

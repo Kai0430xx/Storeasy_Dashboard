@@ -95,3 +95,59 @@
     grid-template-columns:1fr;
   }
 }
+
+/* waiting-form-layout-v2 */
+.modal.wide.waiting-editor {
+  width:min(1100px, calc(100vw - 40px));
+  max-height:94dvh;
+  overflow-y:auto;
+  box-sizing:border-box;
+}
+.waiting-editor form > fieldset.waiting-form {
+  max-height:none;
+  overflow:visible;
+  border:0;
+  padding:0;
+  margin:0 0 18px;
+}
+.waiting-editor .waiting-branches,
+.waiting-editor .waiting-range {
+  max-height:none;
+  overflow:visible;
+}
+.waiting-editor .waiting-branch-grid {
+  max-height:none;
+  overflow:visible;
+  padding:4px 0;
+  grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+}
+.waiting-branch-group-title {
+  font-weight:600;
+  margin:0 0 8px;
+}
+.waiting-other-branches {
+  border-top:1px solid #dae3ed;
+  margin-top:12px;
+}
+.waiting-other-branches > summary {
+  padding:14px 0;
+  cursor:pointer;
+  font-weight:600;
+}
+.waiting-other-branches > summary span {
+  font-weight:400;
+  color:#728198;
+  margin-left:8px;
+}
+.waiting-custom-branch {
+  margin-top:12px;
+}
+.waiting-editor textarea {
+  min-height:72px;
+}
+@media(max-width:600px){
+  .modal.wide.waiting-editor {
+    width:calc(100vw - 24px);
+    padding:20px;
+  }
+}

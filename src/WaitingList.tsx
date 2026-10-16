@@ -1,3 +1,4 @@
+import WaitingBranchPicker from "./WaitingBranchPicker";
 import {useEffect,useState} from 'react';
 import {X,Plus} from 'lucide-react';
 import SearchInput from './SearchInput';
@@ -300,7 +301,7 @@ export default function WaitingList({profile,branches,branchId,state,focus,onFoc
 
   {edit&&
    <div className="modal-backdrop">
-    <section className="modal wide" role="dialog" aria-modal="true"
+    <section className="modal wide waiting-editor" role="dialog" aria-modal="true"
      aria-label={edit.id?'編輯候補':'新增候補'}>
      <div className="modal-heading">
       <h2>{edit.id?'編輯候補':'新增候補'}</h2>
@@ -330,31 +331,18 @@ export default function WaitingList({profile,branches,branchId,state,focus,onFoc
         </label>
        </div>
 
-       <fieldset className="waiting-branches">
-        <legend>候補據點（可複選）</legend>
-        <div className="waiting-branch-grid">
-         {directory.branches.map(b=>
-          <label key={b.id}>
-           <input type="checkbox" checked={edit.branchIds.includes(b.id)}
-            onChange={e=>update('branchIds',e.target.checked
-             ?[...edit.branchIds,b.id]
-             :edit.branchIds.filter((id:string)=>id!==b.id))}/>
-           <span>{b.name}</span>
-          </label>
-         )}
-         <label>
-          <input type="checkbox" checked={other} onChange={e=>setOther(e.target.checked)}/>
-          <span>其它據點</span>
-         </label>
-        </div>
-        {other&&
-         <label>
-          其它據點名稱
-          <input required maxLength={300} placeholder="多個據點可用頓號分隔"
-           value={edit.otherBranches} onChange={e=>update('otherBranches',e.target.value)}/>
-         </label>
-        }
-       </fieldset>
+       <WaitingBranchPicker
+        key={edit.id || 'new'}
+        branches={directory.branches}
+        ownedIds={profile.branchIds || []}
+        global={['admin','supervisor'].includes(profile.role)}
+        selected={edit.branchIds}
+        onChange={ids=>update('branchIds',ids)}
+        other={other}
+        onOtherChange={setOther}
+        otherName={edit.otherBranches}
+        onOtherNameChange={name=>update('otherBranches',name)}
+       />
 
        <div className="waiting-fields">
         {[

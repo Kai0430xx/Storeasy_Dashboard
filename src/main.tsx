@@ -991,7 +991,7 @@ function App() {
               )}
 
               {page === "dashboard" && <>
-                <GoalsOverview
+                <GoalsOverview collapsible={branchId === "all"}
                   branches={visible} data={data} month={month}
                   global={Boolean(global)}
                 />
