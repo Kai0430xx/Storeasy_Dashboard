@@ -27,7 +27,7 @@ jobs:
           node-version: '22'
 
       - name: Apply dashboard features
-        run: python3 scripts/tidy-waiting-status.py
+        run: python3 scripts/tidy-branch-picker-and-activities.py
 
       - name: Install dependencies
         run: |
