@@ -32,13 +32,14 @@ export default function WaitingList({profile,branches,branchId,state,focus,onFoc
  const [busy,setBusy]=useState(false);
  const [error,setError]=useState('');
 
+ const [savedNotice,setSavedNotice]=useState('');
  const names=new Map(directory.branches.map(b=>[b.id,b.name]));
  const branchText=(r:Row)=>[
   ...r.branchIds.map((id:string)=>names.get(id)||branches.find(b=>b.id===id)?.name||'據點名稱載入中'),
   r.otherBranches?`其它：${r.otherBranches}`:''
  ].filter(Boolean).join('、');
 
- const open=(r:Row)=>{
+ const open=(r:Row)=>{setSavedNotice('');
   setSelected(r.id);
   setError('');
   void state.markRead(r);
@@ -93,7 +94,7 @@ export default function WaitingList({profile,branches,branchId,state,focus,onFoc
   &&[r.name,r.phone,r.email,r.items,r.note,branchText(r)].join(' ').toLowerCase().includes(search.trim().toLowerCase())
  );
 
- const startEdit=(r?:Row)=>{
+ const startEdit=(r?:Row)=>{setSavedNotice('');
   setError('');
   setEdit(r?{...r}:blank());
   setOther(!!r?.otherBranches);
@@ -106,13 +107,13 @@ export default function WaitingList({profile,branches,branchId,state,focus,onFoc
   setBusy(true);
   setError('');
   try{
-   const id=await saveWaiting(
+   await saveWaiting(
     {...edit,otherBranches:other?edit.otherBranches:''},
     edit.id,
     edit.revision
    );
    setEdit(null);
-   setSelected(id);
+   setSelected(null);setSavedNotice('候補已儲存');
   }catch(e:any){
    setError(e.message);
   }finally{
@@ -154,6 +155,7 @@ export default function WaitingList({profile,branches,branchId,state,focus,onFoc
  }
 
  return <>
+  {savedNotice&&!edit&&<div className="alert success" role="status">{savedNotice}<button aria-label="關閉儲存提示" onClick={()=>setSavedNotice('')}>×</button></div>}
   {(state.error||state.syncError||directory.error)&&
    <div role="alert" className="alert error">
     {state.error||state.syncError||directory.error}

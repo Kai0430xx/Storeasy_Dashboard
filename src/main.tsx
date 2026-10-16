@@ -1,3 +1,4 @@
+import ActivityOverviewDisclosure from "./ActivityOverviewDisclosure";
 import OccupancyChart from "./OccupancyChart";
 import WaitingList from "./WaitingList";
 import {useWaitingList} from "./waiting-list";
@@ -943,7 +944,7 @@ function App() {
                   </section></BranchOverviewDisclosure>
 
                   <RevenueComparison key={"revenue-"+branchId} branches={visible} data={data} month={month} collapsible={branchId === "all"}/>
-                  <section className="panel">
+                  <ActivityOverviewDisclosure key={"activities-"+branchId} collapsed={branchId === "all"}><section className="panel">
                     <div className="panel-heading">
                       <div>
                         <h2>活動使用概況</h2>
@@ -986,7 +987,7 @@ function App() {
                     {!activities.some(
                       (activity) => activity.month === month,
                     ) && <Empty text="本月尚無活動" />}
-                  </section>
+                  </section></ActivityOverviewDisclosure>
                 </>
               )}
 

@@ -1,0 +1,31 @@
+
+.activity-overview-disclosure {
+  padding:0;
+}
+.activity-overview-disclosure > summary {
+  padding:18px 24px;
+  font-weight:600;
+  cursor:pointer;
+}
+.activity-overview-disclosure > summary:focus-visible {
+  outline:2px solid #204b80;
+  outline-offset:-4px;
+  border-radius:10px;
+}
+.activity-overview-disclosure-body {
+  padding:0 24px 24px;
+}
+.activity-overview-disclosure-body > .panel {
+  margin:0;
+  border:0;
+  box-shadow:none;
+}
+.activity-overview-disclosure-body .panel-heading {
+  padding:0 0 16px;
+}
+.activity-overview-disclosure-body .panel-heading h2 {
+  display:none;
+}
+.activity-overview-disclosure-body .activity-summary {
+  padding:0;
+}
