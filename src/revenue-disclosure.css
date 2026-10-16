@@ -1,0 +1,29 @@
+
+.revenue-disclosure {
+  padding: 0;
+}
+.revenue-disclosure > summary {
+  padding: 18px 22px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.revenue-disclosure > summary:focus-visible {
+  outline: 2px solid #204b80;
+  outline-offset: -4px;
+  border-radius: 10px;
+}
+.revenue-disclosure-body {
+  padding: 0 22px 20px;
+}
+.revenue-disclosure-body > p {
+  margin: 0 0 16px;
+}
+.revenue-disclosure-body > .panel {
+  padding: 0;
+  margin: 0;
+  border: 0;
+  box-shadow: none;
+}
+.revenue-disclosure-body .panel-heading {
+  display: none;
+}

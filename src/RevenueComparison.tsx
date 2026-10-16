@@ -1,3 +1,4 @@
+import "./revenue-disclosure.css";
 import { revenueComparison } from './revenue-comparison.js';
 import { taipeiDate } from './domain.js';
 
@@ -20,7 +21,7 @@ const percent = (r: Row) =>
       ? '去年為 0，不計算增減率'
       : `${r.percent > 0 ? '+' : ''}${r.percent.toFixed(1)}%`;
 
-export default function RevenueComparison({
+function RevenueComparisonContent({
   branches, data, month,
 }: {
   branches: Row[];
@@ -106,5 +107,35 @@ export default function RevenueComparison({
         </>
       )}
     </section>
+  );
+}
+
+
+type RevenueProps = {
+  branches: Row[];
+  data: Record<string, Row>;
+  month: string;
+  collapsible?: boolean;
+};
+
+export default function RevenueComparison({
+  collapsible = false,
+  ...props
+}: RevenueProps) {
+  if (!collapsible) {
+    return <RevenueComparisonContent {...props}/>;
+  }
+
+  return (
+    <details className="panel revenue-disclosure">
+      <summary>業績去年同月比較</summary>
+      <div className="revenue-disclosure-body">
+        <p>
+          {props.month} 與 {Number(props.month.slice(0, 4)) - 1}
+          {props.month.slice(4)} · KPI 實際業績金額
+        </p>
+        <RevenueComparisonContent {...props}/>
+      </div>
+    </details>
   );
 }

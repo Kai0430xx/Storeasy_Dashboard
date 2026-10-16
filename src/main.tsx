@@ -754,7 +754,7 @@ function App() {
                     )}
                   </div>
 
-                  <RevenueComparison branches={visible} data={data} month={month}/>
+                  
                   <div className="dashboard-grid">
                     <section className="panel">
                       <div className="panel-heading">
@@ -973,6 +973,7 @@ function App() {
                     </div>
                   </section>
 
+                  <RevenueComparison key={branchId} branches={visible} data={data} month={month} collapsible={branchId === "all"}/>
                   <section className="panel">
                     <div className="panel-heading">
                       <div>
