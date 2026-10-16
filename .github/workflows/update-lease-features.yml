@@ -44,7 +44,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src firestore.rules
+          git add src firestore.rules AGENTS.md
           if ! git diff --cached --quiet; then
             git commit -m "Add rental details and activity deletion"
             git push origin HEAD:main
