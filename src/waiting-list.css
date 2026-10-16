@@ -115,3 +115,23 @@
 .waiting-reminder-legend { display:flex; gap:16px; flex-wrap:wrap; color:#718099; font-size:13px; margin:12px 0 18px; }
 .waiting-reminder-legend > span { display:inline-flex; gap:6px; align-items:center; }
 .waiting-reminder-legend .dot { position:static; display:inline-block; flex-shrink:0; }
+
+/* waiting-status-one-row-v1 */
+.modal fieldset.waiting-detail-status {
+ min-width:0;
+}
+
+.waiting-detail-status > .waiting-status-tabs {
+ display:grid;
+ grid-template-columns:repeat(5,minmax(max-content,1fr));
+ gap:8px;
+ overflow-x:auto;
+ padding-bottom:4px;
+}
+
+.waiting-detail-status .waiting-status-tabs > label {
+ white-space:nowrap;
+ padding:10px 8px;
+ gap:6px;
+ justify-content:center;
+}

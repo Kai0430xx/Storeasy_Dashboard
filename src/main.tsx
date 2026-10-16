@@ -1,3 +1,4 @@
+import {usePageNavigation} from "./page-navigation";
 import ActivityOverviewDisclosure from "./ActivityOverviewDisclosure";
 import OccupancyChart from "./OccupancyChart";
 import WaitingList from "./WaitingList";
@@ -121,7 +122,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [branchRows, setBranches] = useState<Row[]>([]);
   const [branchId, setBranchId] = useState("all");
-  const [page, setPage] = useState("dashboard");
+  const [page, setPage] = usePageNavigation(profile?.role);
   const [month, setMonth] = useState(today().slice(0, 7));
   const [data, setData] = useState<
     Record<string, {
