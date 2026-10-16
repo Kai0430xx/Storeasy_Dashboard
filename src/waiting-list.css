@@ -151,3 +151,36 @@
     padding:20px;
   }
 }
+
+/* waiting-detail-status-v1 */
+.modal fieldset.waiting-detail-status {
+  padding:16px;
+  margin:24px 0 28px;
+  max-height:none;
+  overflow:visible;
+  background:#f6f8fb;
+  border:1px solid #dae3ed;
+}
+.waiting-detail-status > legend {
+  font-size:14px;
+  font-weight:600;
+  padding:0 6px;
+}
+.waiting-detail-status > .waiting-status-tabs {
+  gap:12px 20px;
+}
+.waiting-detail-status .waiting-status-tabs > label {
+  min-height:44px;
+  padding:10px 16px;
+  margin:0;
+  border:1px solid #d7e1ed;
+  border-radius:8px;
+  background:white;
+  font-size:14px;
+  line-height:1.5;
+  white-space:nowrap;
+  cursor:pointer;
+}
+.waiting-detail-status + h3 {
+  margin:0 0 14px;
+}

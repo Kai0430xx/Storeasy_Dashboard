@@ -252,7 +252,7 @@ export default function WaitingList({profile,branches,branchId,state,focus,onFoc
       ].map(([k,v])=><div key={k}><dt>{k}</dt><dd>{v||''}</dd></div>)}
      </dl>
 
-     <div className="waiting-status-tabs">
+     <fieldset className="waiting-detail-status"><legend>候補狀態</legend><div className="waiting-status-tabs">
       <label>
        <input type="checkbox" checked={row.status==='rented'} disabled={busy}
         onChange={e=>status(row,e.target.checked?'rented':'waiting')}/>
@@ -263,7 +263,7 @@ export default function WaitingList({profile,branches,branchId,state,focus,onFoc
         onChange={e=>status(row,e.target.checked?'cancelled':'waiting')}/>
        已取消
       </label>
-     </div>
+     </div></fieldset>
 
      <h3>合適空倉</h3>
      {row.status!=='waiting'
