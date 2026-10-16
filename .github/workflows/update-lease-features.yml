@@ -27,7 +27,7 @@ jobs:
           node-version: '22'
 
       - name: Apply dashboard features
-        run: python3 scripts/tidy-waiting-name-width.py
+        run: python3 scripts/add-branch-cheers.py
 
       - name: Install dependencies
         run: |
