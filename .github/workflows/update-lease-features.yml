@@ -27,7 +27,7 @@ jobs:
           node-version: '22'
 
       - name: Apply dashboard features
-        run: python3 scripts/update-waiting-list.py
+        run: python3 scripts/tidy-waiting-form.py
 
       - name: Install dependencies
         run: |
