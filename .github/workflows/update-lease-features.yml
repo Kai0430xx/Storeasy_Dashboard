@@ -27,7 +27,7 @@ jobs:
           node-version: '22'
 
       - name: Apply dashboard features
-        run: python3 scripts/remember-current-page.py
+        run: python3 scripts/filter-waiting-matches.py
 
       - name: Install dependencies
         run: |
