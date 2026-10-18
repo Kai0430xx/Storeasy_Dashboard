@@ -28,7 +28,7 @@ jobs:
 
       - name: Apply dashboard features
         run: |
-          python3 scripts/fix-work-delete-notifications.py
+          python3 scripts/update-mobile-pages-v2.py
           if [ -f public/icons/storeasy-icon.png ] && [ -f scripts/update-app-icon.py ]; then
             python3 scripts/update-app-icon.py
           fi
