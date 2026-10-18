@@ -1,0 +1,179 @@
+
+/* mobile-pages-v2 */
+.mobile-work-backbar,.mobile-work-threads,.mobile-unit-sort {
+ display:none;
+}
+@media(max-width:760px) {
+ main > header {
+  position:sticky; top:0; z-index:15;
+  padding-top:max(10px,env(safe-area-inset-top));
+ }
+ .mobile-work-focused main > header {
+  visibility:hidden; pointer-events:none;
+ }
+ .work-area:not(.mobile-work-detail) .work-layout {
+  display:block; height:auto; min-height:0;
+ }
+ .work-area:not(.mobile-work-detail) .work-list {
+  max-height:none; overflow:visible; border:0;
+ }
+ .work-area:not(.mobile-work-detail) .work-conversation {
+  display:none;
+ }
+ .work-area.mobile-work-detail {
+  position:fixed; inset:0; z-index:30; background:#f5f7fa;
+  display:flex; flex-direction:column; overflow:hidden;
+  padding-top:env(safe-area-inset-top);
+  padding-bottom:env(safe-area-inset-bottom);
+ }
+ .mobile-work-detail > .work-toolbar,
+ .mobile-work-detail > .work-categories,
+ .mobile-work-detail > .work-filters {
+  display:none;
+ }
+ .mobile-work-detail > .alert {
+  flex-shrink:0; margin:0; max-height:20dvh; overflow:auto;
+ }
+ .mobile-work-backbar {
+  display:flex; justify-content:space-between; gap:8px;
+  align-items:center; flex-shrink:0; min-height:56px;
+  padding:6px 12px; background:white;
+  border-bottom:1px solid #dce5f1;
+ }
+ .mobile-work-backbar button {
+  min-height:44px; color:#173f75; font-weight:600;
+ }
+ .mobile-work-detail .work-layout {
+  flex:1; min-height:0; height:auto; display:flex;
+  border:0; border-radius:0;
+ }
+ .mobile-work-detail .work-list { display:none; }
+ .mobile-work-detail .work-conversation {
+  display:flex; flex:1; min-height:0; width:100%;
+  overflow-y:auto; overscroll-behavior:contain;
+ }
+ .mobile-work-detail .work-detail {
+  display:block; flex-shrink:0; max-height:none;
+  overflow:visible; height:auto; padding:16px;
+ }
+ .mobile-work-detail .work-detail .work-toolbar {
+  align-items:flex-start; flex-wrap:nowrap;
+ }
+ .mobile-work-detail .work-detail h2 {
+  font-size:20px; line-height:1.5; overflow-wrap:anywhere;
+ }
+ .mobile-work-detail .work-complete { flex-shrink:0; }
+ .mobile-work-detail .work-messages {
+  flex:1 0 auto; overflow:visible; min-height:180px;
+ }
+ .mobile-work-detail .work-composer {
+  position:sticky; bottom:0; flex-shrink:0; background:white;
+  padding-bottom:max(10px,env(safe-area-inset-bottom));
+ }
+ .mobile-work-threads {
+  display:flex; flex-wrap:wrap; gap:8px; padding:12px 16px;
+  border-bottom:1px solid #dce5f1;
+ }
+ .mobile-work-threads button {
+  min-height:40px; padding:8px 10px;
+  border:1px solid #dce5f1; background:white;
+  white-space:normal; overflow-wrap:anywhere; max-width:100%;
+ }
+ .mobile-work-threads .selected {
+  background:#173f75; color:white;
+ }
+ .target-panel > .panel-heading {
+  display:grid; grid-template-columns:minmax(0,1fr);
+  align-items:stretch; gap:10px; padding:18px;
+ }
+ .target-panel > .panel-heading h2 {
+  margin:0 0 4px; white-space:normal;
+ }
+ .target-panel > .panel-heading > button {
+  width:100%; min-width:0; justify-content:flex-start;
+  text-align:left; white-space:normal; word-break:normal;
+  line-height:1.6; padding:10px 12px;
+  border:1px solid #dce5f1; min-height:44px;
+ }
+ .mobile-unit-sort {
+  display:flex; padding:12px 16px;
+  border-bottom:1px solid #e6ebf1;
+ }
+ .mobile-unit-sort label {
+  display:flex; flex-direction:row; align-items:center;
+  gap:12px; margin:0; width:100%;
+ }
+ .mobile-unit-sort select { flex:1; min-width:0; }
+ table.mobile-unit-table,table.mobile-events-table,
+ table.mobile-goal-table {
+  display:block; width:100%; min-width:0;
+  white-space:normal; table-layout:fixed;
+ }
+ .mobile-unit-table thead,.mobile-events-table thead,
+ .mobile-goal-table thead { display:none; }
+ .mobile-unit-table tbody,.mobile-events-table tbody,
+ .mobile-goal-table tbody { display:block; width:100%; }
+ .mobile-unit-table tr,.mobile-events-table tr,
+ .mobile-goal-table tr {
+  display:grid; grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:14px 12px; padding:16px;
+  border-bottom:1px solid #dce5f1;
+ }
+ .mobile-unit-table td,.mobile-events-table td,
+ .mobile-goal-table td {
+  display:block; min-width:0; max-width:none; border:0;
+  padding:0; white-space:normal; overflow-wrap:anywhere;
+ }
+ .mobile-unit-table td::before,.mobile-events-table td::before,
+ .mobile-goal-table td::before {
+  content:attr(data-label); display:block; font-size:12px;
+  font-weight:400; color:#7c899b; margin-bottom:5px;
+ }
+ .mobile-unit-table td:first-child {
+  grid-column:1; grid-row:1;
+ }
+ .mobile-unit-table td:first-child strong { font-size:19px; }
+ .mobile-unit-table td[data-label="狀態"] {
+  grid-column:2; grid-row:1;
+ }
+ .mobile-unit-table td[data-label="租期"],
+ .mobile-unit-table td[data-label="空倉起始日"],
+ .mobile-unit-table td[data-label="備註"],
+ .mobile-unit-table td[data-label="操作"] {
+  grid-column:1/-1;
+ }
+ .mobile-unit-table .row-actions {
+  display:flex; flex-wrap:wrap; gap:10px;
+ }
+ .mobile-unit-table .row-actions button {
+  min-height:40px; padding:6px 10px;
+  border:1px solid #dce5f1;
+ }
+ .mobile-events-table td[data-label="使用活動"],
+ .mobile-events-table td[data-label="退租原因"],
+ .mobile-events-table td[data-label="更正"] {
+  grid-column:1/-1;
+ }
+ .mobile-goal-table tr {
+  grid-template-columns:minmax(0,1fr);
+ }
+ .mobile-goal-table td:first-child {
+  font-weight:600; font-size:17px;
+ }
+ .mobile-goal-table td:empty { display:none; }
+ .mobile-goal-table td > span {
+  display:block; margin-top:4px;
+ }
+ .mobile-goal-table td button {
+  min-height:40px; white-space:normal; text-align:left;
+ }
+ .waiting-summary td:nth-child(2) {
+  grid-column:1; grid-row:1;
+ }
+ .waiting-summary td:nth-child(1) {
+  grid-column:2; grid-row:1; text-align:right;
+ }
+ .waiting-summary td:nth-child(3) {
+  grid-column:1/-1; grid-row:2;
+ }
+}

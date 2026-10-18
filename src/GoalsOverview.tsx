@@ -34,7 +34,7 @@ export default function GoalsOverview({branches,records:supplied,data,month,glob
  async function changePeriod(p:string){if(!all)return;setBusy(true);setMessage('');try{await loadDraft(all,p);setPeriod(p);}catch(e){setMessage(String(e));}finally{setBusy(false);}}
  async function apply(e:React.FormEvent<HTMLFormElement>){e.preventDefault();if(!all)return;setBusy(true);let completed=0;const failed:string[]=[];for(const b of all){try{await saveGoal(b.id,period,draft[b.id]);completed++;}catch(err){failed.push(`${b.name}：${err instanceof Error?err.message:String(err)}`);}setMessage(`已處理 ${completed+failed.length}/${all.length} 間`);}setBusy(false);setMessage(`成功 ${completed} 間${failed.length?`；失敗 ${failed.length} 間：${failed.join('；')}`:''}`);if(!failed.length)setAll(null);}
  return <section className="panel target-panel">
-  <div className="panel-heading"><h2>目標與轉介概況</h2><button disabled={busy} onClick={async()=>{
+  <div className="panel-heading"><h2>目標與轉介概況</h2>{global&&<button disabled={busy} onClick={async()=>{
       setBusy(true);
       setMessage("");
       try {
@@ -46,7 +46,7 @@ export default function GoalsOverview({branches,records:supplied,data,month,glob
       } finally {
         setBusy(false);
       }
-    }}>匯出 {year} 年度目標與轉介 Excel</button><YearGoalsView branches={branches} records={records} data={data} year={year}/>{global&&<button className="primary" disabled={busy} onClick={open}>逐店設定全部據點目標</button>}</div>
+    }}>匯出 {year} 年度目標與轉介 Excel</button>}<YearGoalsView branches={branches} records={records} data={data} year={year}/>{global&&<button className="primary" disabled={busy} onClick={open}>逐店設定全部據點目標</button>}</div>
   <p>依上方據點篩選顯示；未設定的指標隱藏，已填寫的額外轉介仍會顯示。</p>{message&&<p role="status">{message}</p>}
   <GoalDisclosure key={"MonthlyGoalsTable-"+month} collapsed={collapsible} title={month+" 每月目標"}><MonthlyGoalsTable branches={branches} records={records} data={data} month={month} global={global} onEdit={onEdit}/></GoalDisclosure>
   <GoalDisclosure key={"AnnualGoalsTable-"+year} collapsed={collapsible} title={year+" 年度目標"}><AnnualGoalsTable branches={branches} records={records} data={data} year={year} global={global} onEdit={onEdit}/></GoalDisclosure>

@@ -74,6 +74,7 @@ import {BookOpen,
 import { auth, db, call, loginEmail } from "./firebase";
 import "./style.css";
 import "./mobile-layout.css";
+import "./mobile-pages-v2.css";
 
 type Row = Record<string, any>;
 
@@ -1158,8 +1159,8 @@ function App() {
                   </div>
 
                   <section className="panel">
-                    <div className="table-wrap">
-                      <table>
+                    <div className="mobile-unit-sort"><label>排序<select aria-label="手機倉位排序" value={unitSort} onChange={e=>setUnitSort(e.target.value)}><option value="code">倉位編號</option><option value="volume">材積由小到大</option></select></label></div><div className="table-wrap">
+                      <table className="mobile-unit-table">
                         <thead>
                           <tr>
                             <th aria-sort={unitSort === "code" ? "ascending" : "none"}><button className="text-button" aria-label="倉位／據點" onClick={() => setUnitSort("code")}>倉位／據點{unitSort === "code" ? " ↑" : ""}</button></th>
@@ -1189,28 +1190,28 @@ function App() {
                               <tr
                                 key={unit.branchId + unit.code}
                               >
-                                <td>
+                                <td data-label="倉位／據點">
                                   <strong>{unit.code}</strong>
                                   <small className="table-sub">
                                     {unit.branchName}
                                   </small>
                                 </td>
-                                <td>{unit.dimensions || "—"}</td>
-                                <td>{unit.volume}</td>
-                                <td>
+                                <td data-label="尺寸">{unit.dimensions || "—"}</td>
+                                <td data-label="材積">{unit.volume}</td>
+                                <td data-label="月租">
                                   NT$ {Number(unit.price).toLocaleString()}
                                 </td>
-                                <td>
+                                <td data-label="狀態">
                                   <span className={`badge ${leaseStatus(unit, currentDate).color}`}>{leaseStatus(unit, currentDate).label}</span>{canWrite && !unit.missing && !unit.archived && unit.status==='vacant' && waiting.ready && (()=>{
       const matched=waiting.rows.filter(r=>matchingVacancies(r,[unit]).length>0);
       return matched.length>0?<button className="text-button waiting-unit-match" onClick={()=>{setWaitingFocus("unit:"+JSON.stringify([unit.branchId,unit.code]));setBranchId(unit.branchId);setPage('waiting');}}>符合候補 {matched.length} 筆</button>:null;
     })()}
                                 </td>
-                                <td>{unit.leasePeriod || "—"}</td>{status === "vacant" && <td><VacancyCell unit={unit} editable={Boolean(canWrite)} /></td>}
-                                <td>{unit.note || "—"}</td>
+                                <td data-label="租期">{unit.leasePeriod || "—"}</td>{status === "vacant" && <td data-label="空倉起始日"><VacancyCell unit={unit} editable={Boolean(canWrite)} /></td>}
+                                <td data-label="備註">{unit.note || "—"}</td>
 
                                 {canWrite && (
-                                  <td>
+                                  <td data-label="操作">
                                     <div className="row-actions">
                                       {!unit.missing && (unit.status==='rented'?['renew','exit','transferOut']:['new','transferIn']).map(type=><button className="text-button" key={type} onClick={()=>{setMonth(today().slice(0,7));setModal({kind:type.startsWith('transfer')?'transfer':'event',unit:unit,type});}}>{type==='new'?'承租':types[type]}</button>)}
 
@@ -1243,7 +1244,7 @@ function App() {
                       <h2>異動紀錄 · {month}</h2>
                     </div>
                     <div className="table-wrap">
-                      <table>
+                      <table className="mobile-events-table">
                         <thead>
                           <tr>
                             <th>日期</th>
@@ -1262,29 +1263,29 @@ function App() {
                             )
                             .map((event) => (
                               <tr key={event.id}>
-                                <td>{event.date}</td>
-                                <td>
+                                <td data-label="日期">{event.date}</td>
+                                <td data-label="倉位／據點">
                                   {event.code}
                                   <small className="table-sub">
                                     {event.branchName}
                                   </small>
                                 </td>
-                                <td>{types[event.type]}</td>
-                                <td>
+                                <td data-label="類型">{types[event.type]}</td>
+                                <td data-label="異動當時牌價">
                                   {event.priceSnapshot?.price === undefined
                                     ? "尚未記錄"
                                     : `NT$ ${Number(
                                         event.priceSnapshot.price
                                       ).toLocaleString()}`}
                                 </td>
-                                <td>
+                                <td data-label="使用活動">
                                   {event.activities
                                     ?.map((activity: Row) => activity.name)
                                     .join("、") || "—"}
                                 </td>
-                                <td className="exit-reason">{event.type === "exit" ? `${event.exitCategory || "未分類"}：${event.exitReason || "未記錄"}` : "—"}</td>
+                                <td data-label="退租原因" className="exit-reason">{event.type === "exit" ? `${event.exitCategory || "未分類"}：${event.exitReason || "未記錄"}` : "—"}</td>
                                 {canWrite && (
-                                  <td>
+                                  <td data-label="更正">
                                     <button
                                       className="text-button"
                                       onClick={() =>
