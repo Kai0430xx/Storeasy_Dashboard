@@ -1258,7 +1258,7 @@ function App() {
                         </thead>
                         <tbody>
                           {events
-                            .filter((event) => event.month === month)
+                            .filter((event) => event.month === month && event.type !== "activitySupplement")
                             .sort((a, b) =>
                               b.date.localeCompare(a.date),
                             )
