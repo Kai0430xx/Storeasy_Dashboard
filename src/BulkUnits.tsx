@@ -201,6 +201,12 @@ export default function BulkUnits({visibleUnits,profile,children}:{
   setBusy(false);setPhase('result');setChecked([]);
  }
 
+ function discardDraft(){
+  if(busy)return;
+  if(!window.confirm('確定不保留本次清單並返回？尚未送出的資料將清除；已成功送出的異動會保留，不會撤銷。'))return;
+  try{sessionStorage.removeItem(key);}catch{}
+  setDraft(null);setChecked([]);setOpen(false);setError('');setPhase('edit');
+ }
  function close(){
   if(busy)return;
   setOpen(false);setError('');
@@ -326,7 +332,7 @@ export default function BulkUnits({visibleUnits,profile,children}:{
      </button>}
      <button className="secondary" disabled={busy} onClick={close}>
       {rows.length===success?'完成並返回':'關閉並保留清單'}
-     </button>
+     </button>{rows.length!==success&&<button className="secondary" disabled={busy} onClick={discardDraft}>不保留清單並返回</button>}
     </div>
    </section>
   </div>}
