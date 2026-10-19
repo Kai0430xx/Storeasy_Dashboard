@@ -64,13 +64,11 @@ export default function InventoryReview({units,busy,onSubmit,onError,months=[]}:
    const f=new FormData(e.currentTarget);
    setReading(true);onError('');setPreview(null);
    try{
-    const {workbook,parseUnits}=await import('./imports');
-    const file=f.get('all') as File;
-    const rows=parseUnits(
-     await workbook(await file.arrayBuffer()),undefined,
-     {requirePrice:true,requireLease:true}
-    );
-    const comparison=compareInventory(rows,units);
+    const {workbook}=await import('./imports');
+ const {parseInventoryFile}=await import('./raw-inventory.js');
+ const file=f.get('all') as File;
+ const {units:rows,report}=parseInventoryFile(await workbook(await file.arrayBuffer()));
+ const comparison=compareInventory(rows,units);
     const date=String(f.get('date'));
     const edits=Object.fromEntries(comparison.differences.map((r:any)=>[
      r.code,{
@@ -82,7 +80,7 @@ export default function InventoryReview({units,busy,onSubmit,onError,months=[]}:
     setSelected(comparison.differences.map((r:any)=>r.code));
     setBatchMonth(taipeiDate().slice(0,7));
     setPage(0);
-    setPreview({...comparison,id:crypto.randomUUID(),date,filename:file.name});
+    setPreview({...comparison,id:crypto.randomUUID(),date,filename:file.name,report});
    }catch(e:any){onError(e.message||String(e));}
    finally{setReading(false);}
   }}>
@@ -110,7 +108,17 @@ export default function InventoryReview({units,busy,onSubmit,onError,months=[]}:
     全部匯入會移除這些倉位，既有異動歷史與 KPI 保留；僅匯入差異時不更動這些倉位。
    </p>}
 
-   <h3>與既有資料不同的倉位</h3>
+   
+  {preview.report&&<div className="raw-import-report">
+   <h3>原始檔辨識結果</h3>
+   <p>{preview.report.format}；合併續列略過 {preview.report.merged} 列；自動整理 {preview.report.fixes.length} 格。</p>
+   <p className="hint">{preview.report.ignored}</p>
+   {preview.report.fixes.length>0&&<details>
+    <summary>查看自動整理明細</summary>
+    {preview.report.fixes.map((v:any,i:number)=><p key={i}>{v.cell}：{v.before} → {String(v.after)}</p>)}
+   </details>}
+  </div>}
+<h3>與既有資料不同的倉位</h3>
    {!codes.length?<p>沒有差異，無需更新倉位。</p>:<>
     <p className="hint">
      下列差異全部會匯入。勾選僅用於批次指定月份，不是排除匯入。

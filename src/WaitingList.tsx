@@ -22,6 +22,7 @@ export default function WaitingList({profile,branches,branchId,state,focus,onFoc
  const [unitFilter,setUnitFilter]=useState<string[]|null>(null);
  const directory=useWorkBranches(profile,branches),[filter,setFilter]=useState('waiting'),[search,setSearch]=useState(''),[selected,setSelected]=useState<string|null>(null),[edit,setEdit]=useState<Row|null>(null),[other,setOther]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const [savedNotice,setSavedNotice]=useState('');
+ const [checked,setChecked]=useState<string[]>([]);
  const names=new Map(directory.branches.map(b=>[b.id,b.name]));
  const branchText=(r:Row)=>[...r.branchIds.map((id:string)=>names.get(id)||branches.find(b=>b.id===id)?.name||'據點名稱載入中'),r.otherBranches?`其它：${r.otherBranches}`:''].filter(Boolean).join('、');
  const open=(r:Row)=>{setSavedNotice('');setSelected(r.id);setError('');void state.markRead(r);};
@@ -32,6 +33,26 @@ export default function WaitingList({profile,branches,branchId,state,focus,onFoc
  useEffect(()=>{if(originalRow&&state.ready)void state.markRead(originalRow);},[selected,Boolean(originalRow),state.ready]);
  const focusedUnit=unitFilter?state.stock.find(u=>u.branchId===unitFilter[0]&&u.code===unitFilter[1]):null;
  const list=state.rows.filter(r=>(!unitFilter||(focusedUnit&&matchingVacancies(r,[focusedUnit]).length>0))&&(r.deleting||filter==='all'||(filter==='waiting'?activeWaiting(r):r.status===filter))&&(branchId==='all'||r.branchIds.includes(branchId))&&[r.name,r.phone,r.email,r.items,r.note,branchText(r)].join(' ').toLowerCase().includes(search.trim().toLowerCase()));
+
+ // waiting-bulk-read-v1
+ const selectable=list.filter(r=>!r.deleting);
+ const picked=selectable.filter(r=>checked.includes(r.id));
+ useEffect(()=>{
+  const ids=new Set(selectable.map(r=>r.id));
+  setChecked(old=>old.filter(id=>ids.has(id)));
+ },[selectable.map(r=>r.id).join('|')]);
+
+ async function readBatch(all:boolean){
+  if(busy)return;
+  setBusy(true);setError('');
+  try{
+   const count=await state.markManyRead(all?selectable:picked);
+   setChecked([]);
+   setSavedNotice(`已將 ${count} 筆候補設為已讀`);
+  }catch(e:any){
+   setError(e.message||'標記已讀失敗，請重試');
+  }finally{setBusy(false);}
+ }
  const startEdit=(r?:Row)=>{setSavedNotice('');setError('');setEdit(r?{...r,noteDrafts:[]}:blank());setOther(!!r?.otherBranches);};
  const update=(key:string,value:any)=>setEdit(e=>e?{...e,[key]:value}:e);
  async function save(e:React.FormEvent){e.preventDefault();if(!edit||busy)return;if(hasUnaddedNote){setError('請先按「加入備註」或「取消新增備註」，再確認儲存');return;}setBusy(true);setError('');try{await saveWaiting({...edit,otherBranches:other?edit.otherBranches:''},edit.id,edit.revision);setEdit(null);setSelected(null);setSavedNotice('候補已儲存');}catch(e:any){setError(e.message);}finally{setBusy(false);}}
@@ -45,8 +66,27 @@ export default function WaitingList({profile,branches,branchId,state,focus,onFoc
   <div className="toolbar"><div className="search"><SearchInput aria-label="搜尋候補" placeholder="搜尋姓名、電話前四碼、物品或備註" value={search} onChange={e=>setSearch(e.target.value)} onClear={()=>setSearch('')}/></div><span className="hint">{state.syncing?'正在建立既有空倉索引…':`共 ${list.length} 筆`} · 需求金額以月租比對</span></div>
   <p className="waiting-reminder-legend"><span><i className="dot waiting-dot-yellow"/>新增候補或新空倉配對</span><span><i className="dot waiting-dot-red"/>需求已到期未讀</span></p>
   {unitFilter&&<div className="alert success">僅顯示符合空倉 {unitFilter[1]} 的候補<button onClick={()=>setUnitFilter(null)}>顯示全部候補</button></div>}
+
+  <div className="waiting-read-toolbar">
+   <label><input type="checkbox" aria-label="全選目前候補"
+    disabled={busy||!state.ready||!selectable.length}
+    checked={!!selectable.length&&picked.length===selectable.length}
+    ref={e=>{if(e)e.indeterminate=picked.length>0&&picked.length<selectable.length;}}
+    onChange={e=>setChecked(e.target.checked?selectable.map(r=>r.id):[])}
+   />全選目前清單</label>
+   <span>已勾選 {picked.length} 筆</span>
+   <button className="secondary" disabled={busy||!state.ready||!picked.some(state.unread)} onClick={()=>readBatch(false)}>勾選項目已讀</button>
+   <button className="secondary" disabled={busy||!state.ready||!selectable.some(state.unread)} onClick={()=>readBatch(true)}>全部已讀</button>
+   <small>僅套用目前據點、狀態及搜尋篩選後的清單。</small>
+  </div>
   <section className="panel waiting-summary"><div className="table-wrap"><table className="waiting-list-table"><thead><tr><th>登記日期</th><th>姓名</th><th>候補據點</th><th>需求材積</th><th>需求月租</th><th>需求時間</th><th>需求到期時間</th><th>合適空倉</th><th>狀態</th></tr></thead><tbody>{list.map(r=><tr key={r.id}>
-   <td data-label="登記日期">{r.date}</td><td data-label="姓名"><button className="text-button waiting-name" onClick={()=>open(r)}><span>{r.name}</span>{state.notification(r)&&<i className={'dot waiting-dot-'+state.notification(r)} aria-label={state.notification(r)==='red'?'需求已到期未讀':'有新的候補或合適空倉'}/>}</button></td><td data-label="候補據點"><WaitingBranches labels={[
+   <td data-label="登記日期">{r.date}</td><td data-label="姓名">
+<input className="waiting-read-check" type="checkbox"
+ aria-label={'勾選候補 '+r.name}
+ disabled={busy||!state.ready||!!r.deleting}
+ checked={checked.includes(r.id)}
+ onChange={e=>setChecked(old=>e.target.checked?[...old,r.id]:old.filter(id=>id!==r.id))}
+/><button className="text-button waiting-name" onClick={()=>open(r)}><span>{r.name}</span>{state.notification(r)&&<i className={'dot waiting-dot-'+state.notification(r)} aria-label={state.notification(r)==='red'?'需求已到期未讀':'有新的候補或合適空倉'}/>}</button></td><td data-label="候補據點"><WaitingBranches labels={[
      ...r.branchIds.map((id:string)=>
       String(names.get(id)||'據點名稱載入中')),
      ...(r.otherBranches?['其它：'+r.otherBranches]:[])

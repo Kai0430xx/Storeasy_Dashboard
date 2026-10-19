@@ -68,7 +68,31 @@ export function useWaitingList(profile:WaitingRow|null,branches:WaitingRow[],ini
   const ref=doc(db,'waitingReads',uid,'items',row.id);
   try{await runTransaction(db,async tx=>{const old=await tx.get(ref);const seen=[...new Set([...(old.data()?.seen||[]),...keys])].slice(-2000);tx.set(ref,{seen});});}catch(e){setError(message(e));}
  }
- return {rows,stock:availableStock,matches,unread,notification,isExpired,alertTone,hasUnread:rows.some(unread),markRead,ready,error,syncError,syncing,retrySync:()=>setRetry(n=>n+1)};
+
+ // waiting-bulk-read-v1
+ async function markManyRead(targets:WaitingRow[]){
+  if(!uid||!ready)throw Error('候補清單尚未載入完成');
+  const jobs=[...new Map(targets.map(row=>[row.id,row])).values()]
+   .filter(row=>!row.deleting&&unread(row))
+   .map(row=>({
+    id:row.id,
+    keys:['created',...(matches[row.id]||[]).map(vacancyKey),...(isExpired(row)?[expiryKey(row)]:[])]
+   }));
+  let completed=0,failed=0;
+  for(let i=0;i<jobs.length;i+=20){
+   const results=await Promise.allSettled(jobs.slice(i,i+20).map(async job=>{
+    const ref=doc(db,'waitingReads',uid,'items',job.id);
+    await runTransaction(db,async tx=>{
+     const old=await tx.get(ref);
+     tx.set(ref,{seen:[...new Set([...(old.data()?.seen||[]),...job.keys])].slice(-2000)});
+    });
+   }));
+   for(const result of results)result.status==='fulfilled'?completed++:failed++;
+  }
+  if(failed)throw Error(`已完成 ${completed} 筆，${failed} 筆未完成，請重試`);
+  return completed;
+ }
+ return {rows,stock:availableStock,matches,unread,notification,isExpired,alertTone,hasUnread:rows.some(unread),markRead,markManyRead,ready,error,syncError,syncing,retrySync:()=>setRetry(n=>n+1)};
 }
 export async function saveWaiting(raw:WaitingRow,id?:string,revision?:number){
  const uid=auth.currentUser?.uid;if(!uid)throw new Error('請先登入');

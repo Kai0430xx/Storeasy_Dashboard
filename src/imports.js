@@ -27,6 +27,8 @@ export async function workbook(buffer) {
     }
 
     result.SheetNames.push(sheet.name);
+    result.Merges ||= {};
+    result.Merges[sheet.name] = sheet.model.merges || [];
 
     const rows = [];
 
