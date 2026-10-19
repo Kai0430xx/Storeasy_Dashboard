@@ -429,7 +429,24 @@ match /users/{uid} {
     }
 
 
-        function removesActivity() {
+    
+    // activity-supplement-v1
+    function addsCurrentActivity() {
+     let e=resource.data;let d=request.resource.data;let r=d.activitySupplement;
+     let u=get(/databases/$(database)/documents/branches/$(id)/units/$(e.code)).data;
+     let a=get(/databases/$(database)/documents/branches/$(id)/activities/$(r.activity.id)).data;
+     return e.type in ['new','renew'] && !e.voided && u.status=='rented' && !u.get('missing',false)
+      && u.lastEventId==eventId && u.leasePeriod==e.unitSnapshot.leasePeriod
+      && d.diff(e).affectedKeys().hasOnly(['activities','activitySupplement'])
+      && r.keys().hasOnly(['activity','by','at']) && r.by==request.auth.uid && r.at==request.time
+      && r.activity=={'id':r.activity.id,'name':a.name} && !a.archived && !a.get('deleting',false) && a.month==e.month
+      && e.activities is list && d.activities is list && d.activities.size()<=30
+      && !e.activities.hasAny([r.activity]) && d.activities==e.activities.concat([r.activity]);
+    }
+    allow update: if branchEdit(id) && unlocked(id)
+      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['activities','activitySupplement'])
+      && addsCurrentActivity();
+    function removesActivity() {
           let r = request.resource.data.activityRemoval;
           let lock = get(/databases/$(database)/documents/branches/$(id)).data.importing;
           let activity = get(/databases/$(database)/documents/branches/$(id)/activities/$(r.activity.id)).data;

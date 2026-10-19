@@ -1,3 +1,4 @@
+import ActivitySupplement from "./ActivitySupplement";
 import useInitialBranch from "./use-initial-branch";
 import OwnNotificationBranches from "./OwnNotificationBranches";
 import HeaderAlerts from "./HeaderAlerts";
@@ -1911,7 +1912,7 @@ function App() {
  <p id="renewal-unpaid-help" className="renewal-payment-help">先更新租期並列入待收款，確認收款後才計入續約。</p>
 </div>}{modal.type !== "exit" && (
                   <fieldset>
-                    <legend>使用活動（可複選）</legend>
+                    <legend>使用活動（可複選）</legend><p className="hint">每次承租／續約請重新選擇活動，不會自動沿用上一期。</p>
                     {activities
                       .filter((activity) =>
                         activity.branchId === modal.unit.branchId &&
@@ -2233,6 +2234,7 @@ function App() {
                     defaultValue={modal.note} />
                 </label>
                 {modal.code && modal.status === "rented" && <PendingEdit unit={modal}/>}
+{modal.code && modal.status === "rented" && <ActivitySupplement unit={modal}/>}
                 <Submit busy={busy} />
 
                 {modal.code && (
