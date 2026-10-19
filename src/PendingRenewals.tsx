@@ -57,6 +57,7 @@ export function PendingEdit({unit}:any){
 
 function Payment({row,busy,onSave}:any){
  const [open,setOpen]=useState(false);
+ const [paymentDate,setPaymentDate]=useState(taipeiDate());
 
  return <div style={{borderTop:'1px solid #e3e9f2',padding:'12px 0'}}>
   <strong>{row.branchName}・{row.code}</strong>
@@ -98,15 +99,15 @@ function Payment({row,busy,onSave}:any){
    <div className="form-grid">
     <label>
      收款日期
-     <input type="date" name="date" required max={taipeiDate()} defaultValue={taipeiDate()}/>
+     <input type="date" name="date" required max={taipeiDate()} value={paymentDate} onChange={e=>setPaymentDate(e.target.value)}/>
     </label>
     <label>
      續約統計月份
-     <input type="month" name="month" required defaultValue={taipeiDate().slice(0,7)}/>
+     <input type="month" name="month" required readOnly value={paymentDate.slice(0,7)}/>
     </label>
    </div>
    <p className="hint">
-    已有歷史 KPI 的月份只保留收款紀錄，不加計 KPI；不改動目前倉位租期。
+    統計月份依實際收款日期自動帶入，不依登記續約或租期月份。已有歷史 KPI 的月份只保留收款紀錄，不加計 KPI；不改動目前倉位租期。
    </p>
    <button className="primary" disabled={busy}>確認已收款</button>
   </form>}
@@ -152,7 +153,7 @@ export function PendingRenewals({rows,busy,onSave}:any){
     待收款續約 {rows.length} 筆
    </summary>
    <p className="hint">
-    此處會保留所有未確認收款的租期，即使目前倉位已換租期或退租。
+    此處會保留所有未確認收款的租期，即使目前倉位已換租期或退租。未付款租期已開始時，已出租倉位也會列入「已逾期」，不以新租期結束日延後提醒。
    </p>
    {rows.map((row:any)=><Payment
     key={row.branchId+row.id}

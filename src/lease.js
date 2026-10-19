@@ -39,7 +39,7 @@ export function parseLease(value) {
   };
 }
 
-export function leaseStatus(unit, date = taipeiDate()) {
+export function leaseStatus(unit, date = taipeiDate(), pending = []) {
   if (unit.missing) {
     return {
       key: "missing",
@@ -52,6 +52,18 @@ export function leaseStatus(unit, date = taipeiDate()) {
     return { key: "vacant", label: "空倉", color: "green" };
   }
 
+
+  // unpaid-overdue-v1: payment overdue is independent of the new lease end.
+  const unpaid = pending.some(row => {
+    if (row.status !== 'pending' || row.branchId !== unit.branchId || row.code !== unit.code) return false;
+    let start = row.leaseStart;
+    if (!start) {
+      try { start = parseLease(row.leasePeriod).leaseStart; }
+      catch { return false; }
+    }
+    return validDate(start) && start <= date;
+  });
+  if (unpaid) return { key: 'overdue', label: '已逾期（待收款）', color: 'red' };
   if (!unit.leaseEnd) {
     return {
       key: "unknown",

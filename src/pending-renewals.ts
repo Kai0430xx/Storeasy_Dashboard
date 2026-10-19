@@ -135,8 +135,8 @@ export async function savePendingUnit(data:any){
 
 export async function confirmRenewalPayment(data:any){
  const uid=signed();
- const date=data.date||taipeiDate();
- const month=String(data.month||'');
+ const date=String(data.date||taipeiDate());
+ const month=String(date).slice(0,7);
 
  if(!validDate(date)||date>taipeiDate()
   ||!/^20\d{2}-(0[1-9]|1[0-2])$/.test(month))

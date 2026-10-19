@@ -1178,7 +1178,7 @@ function App() {
                             .filter((unit) =>
                                 (status === "all" || (status === "pendingRenewal" && pendingRenewals.some(p=>p.branchId===unit.branchId&&p.code===unit.code)) ||
                                   (status === "missing" && unit.missing) ||
-                                (status === unit.status && !unit.missing) || status === leaseStatus(unit, currentDate).key
+                                (status === unit.status && !unit.missing) || status === leaseStatus(unit, currentDate, pendingRenewals).key
                               ) &&
                               `${unit.code}${unit.branchName}`
                                 .toLowerCase()
@@ -1203,7 +1203,7 @@ function App() {
                                   NT$ {Number(unit.price).toLocaleString()}
                                 </td>
                                 <td data-label="狀態">
-                                  <span className={`badge ${leaseStatus(unit, currentDate).color}`}>{leaseStatus(unit, currentDate).label}</span>{canWrite && !unit.missing && !unit.archived && unit.status==='vacant' && waiting.ready && (()=>{
+                                  <span className={`badge ${leaseStatus(unit, currentDate, pendingRenewals).color}`}>{leaseStatus(unit, currentDate, pendingRenewals).label}</span>{canWrite && !unit.missing && !unit.archived && unit.status==='vacant' && waiting.ready && (()=>{
       const matched=waiting.rows.filter(r=>matchingVacancies(r,[unit]).length>0);
       return matched.length>0?<button className="text-button waiting-unit-match" onClick={()=>{setWaitingFocus("unit:"+JSON.stringify([unit.branchId,unit.code]));setBranchId(unit.branchId);setPage('waiting');}}>符合候補 {matched.length} 筆</button>:null;
     })()}

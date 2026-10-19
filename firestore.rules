@@ -468,7 +468,7 @@ match /users/{uid} {
      return e.keys().hasOnly(['code','type','date','month','activities','unitSnapshot','priceSnapshot','previousLease','previousEventId','previousEventDate','paymentConfirmation','pendingId','kpiCounted','createdBy','createdAt','voided'])
       && e.paymentConfirmation && e.type=='renew' && !e.voided && e.activities==before.unitSnapshot.get('activities',[]) && e.activities is list && e.activities.size()<=30
       && e.createdBy==request.auth.uid && e.createdAt==request.time
-      && e.date.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}') && e.month.matches('[0-9]{4}-(0[1-9]|1[0-2])')
+      && e.date.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}') && e.date.matches(e.month+'-[0-9]{2}') /* payment-month-v1 */ && e.month.matches('[0-9]{4}-(0[1-9]|1[0-2])')
       && e.code==before.code && e.unitSnapshot==before.unitSnapshot
       && before.status=='pending' && after.status=='paid' && after.eventId==eventId
       && after.paymentMonth==e.month && after.paymentDate==e.date

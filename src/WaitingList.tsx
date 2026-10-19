@@ -80,13 +80,13 @@ export default function WaitingList({profile,branches,branchId,state,focus,onFoc
    <small>僅套用目前據點、狀態及搜尋篩選後的清單。</small>
   </div>
   <section className="panel waiting-summary"><div className="table-wrap"><table className="waiting-list-table"><thead><tr><th>登記日期</th><th>姓名</th><th>候補據點</th><th>需求材積</th><th>需求月租</th><th>需求時間</th><th>需求到期時間</th><th>合適空倉</th><th>狀態</th></tr></thead><tbody>{list.map(r=><tr key={r.id}>
-   <td data-label="登記日期">{r.date}</td><td data-label="姓名">
-<input className="waiting-read-check" type="checkbox"
+   <td data-label="登記日期"><input className="waiting-read-check" type="checkbox"
  aria-label={'勾選候補 '+r.name}
  disabled={busy||!state.ready||!!r.deleting}
  checked={checked.includes(r.id)}
  onChange={e=>setChecked(old=>e.target.checked?[...old,r.id]:old.filter(id=>id!==r.id))}
-/><button className="text-button waiting-name" onClick={()=>open(r)}><span>{r.name}</span>{state.notification(r)&&<i className={'dot waiting-dot-'+state.notification(r)} aria-label={state.notification(r)==='red'?'需求已到期未讀':'有新的候補或合適空倉'}/>}</button></td><td data-label="候補據點"><WaitingBranches labels={[
+/>{r.date}</td><td data-label="姓名">
+<button className="text-button waiting-name" onClick={()=>open(r)}><span>{r.name}</span>{state.notification(r)&&<i className={'dot waiting-dot-'+state.notification(r)} aria-label={state.notification(r)==='red'?'需求已到期未讀':'有新的候補或合適空倉'}/>}</button></td><td data-label="候補據點"><WaitingBranches labels={[
      ...r.branchIds.map((id:string)=>
       String(names.get(id)||'據點名稱載入中')),
      ...(r.otherBranches?['其它：'+r.otherBranches]:[])
