@@ -1,3 +1,4 @@
+import {bulkFingerprint,checkBulkUnit} from "./bulk-operation";
 import {purgeMissingUnits} from "./purge-missing-units";
 import {runTransaction,writeBatch} from "./waiting-stock";
 import {activityCategories} from "./activity-categories.js";
@@ -271,6 +272,8 @@ export async function execute(
     case "recordTransfer": return recordTransfer(data);
     case "undoTransfer": return undoTransfer(data);
     case "recordEvent": {
+      // bulk-events-v1
+      const fingerprint=bulkFingerprint(data);
       if(data.unpaid === "on")return registerUnpaidRenewal(data);
       const {
         branchId,
@@ -298,14 +301,7 @@ export async function execute(
         code
       );
 
-      const eventDoc = doc(
-        collection(
-          db,
-          "branches",
-          branchId,
-          "events"
-        )
-      );
+      const eventDoc = data.operationId ? doc(db,"branches",branchId,"events",data.operationId) : doc(collection(db,"branches",branchId,"events"));
 
       const eventMonthDoc = doc(
         db,
@@ -332,6 +328,8 @@ export async function execute(
       const waitingRef=data.waitingId?
        doc(db,"waitingList",data.waitingId):null;
 await runTransaction(db, async (transaction) => {
+ if(data.operationId){const saved=await transaction.get(eventDoc);if(saved.exists()){const old=saved.data();if(old.createdBy===me&&old.bulkFingerprint===fingerprint&&!old.voided)return;throw Error('此批次編號已有不同資料或已撤銷，請核對原紀錄');}}
+
         const waitingSnapshot=waitingRef?await transaction.get(waitingRef):null;
 
         if(waitingRef&&(
@@ -367,6 +365,7 @@ await runTransaction(db, async (transaction) => {
         const unit = unitSnapshot.data();
         const branchData = branchSnapshot.data();
 
+        checkBulkUnit(data,unit);
         if (branchData.importing) {
           throw new Error("據點正在匯入");
         }
@@ -520,7 +519,7 @@ await runTransaction(db, async (transaction) => {
             unit.lastEventId || null,
           createdBy: me,
           createdAt: time(),
-          voided: false
+          voided: false, ...(data.operationId?{bulkOperationId:data.operationId,bulkFingerprint:fingerprint}:{})
         });
 
         transaction.set(

@@ -1,3 +1,4 @@
+import BulkUnits,{BulkUnitCheck} from "./BulkUnits";
 import ActivitySupplement from "./ActivitySupplement";
 import useInitialBranch from "./use-initial-branch";
 import OwnNotificationBranches from "./OwnNotificationBranches";
@@ -1102,7 +1103,20 @@ function App() {
                 data={data}
               />}
               {page === "units" && (
-                <>
+                <BulkUnits visibleUnits={units
+                            .filter((unit) =>
+                                (status === "all" || (status === "pendingRenewal" && pendingRenewals.some(p=>p.branchId===unit.branchId&&p.code===unit.code)) ||
+                                  (status === "missing" && unit.missing) ||
+                                (status === unit.status && !unit.missing) || status === leaseStatus(unit, currentDate, pendingRenewals).key
+                              ) &&
+                              `${unit.code}${unit.branchName}`
+                                .toLowerCase()
+                                .includes(search.toLowerCase()),
+                            )
+                            .sort((a, b) =>
+                              compareUnits(a, b, unitSort),
+                            )
+                            } profile={profile}>
                   <PendingRenewals rows={pendingRenewals} busy={busy} onSave={run}/>
                   {branchId === "all" &&
        branches.filter(b=>!b.archived).length > 1 &&
@@ -1192,7 +1206,7 @@ function App() {
                                 key={unit.branchId + unit.code}
                               >
                                 <td data-label="倉位／據點">
-                                  <strong>{unit.code}</strong>
+                                  <BulkUnitCheck unit={unit}/><strong>{unit.code}</strong>
                                   <small className="table-sub">
                                     {unit.branchName}
                                   </small>
@@ -1311,7 +1325,7 @@ function App() {
                       )}
                     </div>
                   </section>
-                </>
+                </BulkUnits>
               )}
 
               {page === "activities" && (

@@ -1,3 +1,4 @@
+import {bulkFingerprint,checkBulkUnit} from "./bulk-operation";
 import {runTransaction} from "./waiting-stock";
 import {collection,doc,serverTimestamp} from 'firebase/firestore';
 import {auth,db} from './firebase';
@@ -7,6 +8,8 @@ import {priceSnapshot} from './pricing.js';
 import {pendingRecord,renewalKey} from './pending-renewals';
 
 export async function registerUnpaidRenewal(data:any){
+ // bulk-pending-v1
+ const fingerprint=bulkFingerprint(data);
  const uid=auth.currentUser?.uid;
  if(!uid)throw new Error('請先登入');
 
@@ -39,9 +42,11 @@ export async function registerUnpaidRenewal(data:any){
   const unit=us.data();
   const branch=bs.data();
 
-  if(!branch||!unit||branch.importing)
+  if(data.operationId&&ps.exists()){const previous=ps.data();if(previous.createdBy===uid&&previous.unitSnapshot?.bulkOperationId===data.operationId&&previous.unitSnapshot?.bulkFingerprint===fingerprint)return;throw Error('此租期已有收款追蹤紀錄，請核對待收款清單');}
+ if(!branch||!unit||branch.importing)
    throw new Error('據點或倉位不存在，或據點正在匯入');
 
+  checkBulkUnit(data,unit);
   if(unit.status!=='rented'||unit.missing||unit.archived)
    throw new Error('倉位狀態已變更，請重新開啟續約');
 
@@ -71,7 +76,7 @@ export async function registerUnpaidRenewal(data:any){
 
   tx.set(p,{
    ...pending,
-   unitSnapshot:{...pending.unitSnapshot,activities}
+   unitSnapshot:{...pending.unitSnapshot,activities,...(data.operationId?{bulkOperationId:data.operationId,bulkFingerprint:fingerprint}:{})}
   });
 
   tx.update(u,{
