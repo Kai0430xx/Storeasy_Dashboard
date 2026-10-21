@@ -1223,7 +1223,7 @@ function App() {
     })()}
                                 </td>
                                 <td data-label="租期">{unit.leasePeriod || "—"}</td>{status === "vacant" && <td data-label="空倉起始日"><VacancyCell unit={unit} editable={Boolean(canWrite)} /></td>}
-                                <td data-label="備註">{unit.note || "—"}</td>
+                                <td data-label="備註"><span className="unit-note-preview">{unit.note || "—"}</span></td>
 
                                 {canWrite && (
                                   <td data-label="操作">
@@ -2797,3 +2797,5 @@ createRoot(
 // storeasy-inventory-review-v1
 
 // storeasy-display-cleanup-v1
+
+import './unit-table-fit.css';

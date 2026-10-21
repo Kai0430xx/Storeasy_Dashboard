@@ -1,0 +1,61 @@
+/* unit-table-fit-v1 */
+.table-wrap:has(> table.mobile-unit-table) {
+  min-width: 0;
+  max-width: 100%;
+}
+table.mobile-unit-table {
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+  white-space: normal;
+}
+.mobile-unit-table th,
+.mobile-unit-table td {
+  box-sizing: border-box;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.mobile-unit-table .unit-note-preview {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+  max-height: 3em;
+}
+.mobile-unit-table .row-actions {
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.mobile-unit-table .row-actions button {
+  max-width: 100%;
+  white-space: normal;
+}
+.mobile-unit-table .badge {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+@media (min-width: 761px) {
+  .mobile-unit-table th,
+  .mobile-unit-table td {
+    padding: 14px 8px;
+  }
+  .mobile-unit-table th:nth-child(1) { width: 12%; }
+  .mobile-unit-table th:nth-child(2) { width: 13%; }
+  .mobile-unit-table th:nth-child(3) { width: 6%; }
+  .mobile-unit-table th:nth-child(4) { width: 10%; }
+  .mobile-unit-table th:nth-child(5) { width: 10%; }
+  .mobile-unit-table th:nth-child(6) { width: 17%; }
+
+  .mobile-unit-table:has(td[data-label="操作"]) th:last-child {
+    width: 14%;
+  }
+  .mobile-unit-table:has(td[data-label="空倉起始日"]) th:nth-child(7) {
+    width: 10%;
+  }
+}
