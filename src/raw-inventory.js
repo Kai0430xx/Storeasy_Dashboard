@@ -15,16 +15,8 @@ function cleanNumber(v,cell,fixes){
 }
 
 function cleanDimensions(value,cell,fixes){
- const text=norm(value),num='\\d+(?:\\.\\d+)?';
- const part=`${num}\\s*[*xX×]\\s*${num}\\s*[*xX×]\\s*${num}`;
- const match=text.match(new RegExp(`^(${part}(?:\\s*[+-]\\s*${part})*)`));
- if(!match)throw Error(cell+' 尺寸格式無法辨識');
- const rest=text.slice(match[0].length).trim();
- if(rest&&!rest.split(/\s+/).every(v=>/^\d+(?:\.\d+)?$/.test(v))){
-  throw Error(cell+' 尺寸後有無法辨識的文字');
- }
- if(rest)fixes.push({cell,before:text,after:match[1].trim()});
- return match[1].trim();
+ // dimensions-as-text-v1
+ return String(value ?? '');
 }
 
 // raw-inventory-simple-v2
@@ -59,7 +51,7 @@ export function parseInventoryFile(book){
  for(let i=0;i<raw.length;i++){
   const r=raw[i];
   if(!r.some(v=>norm(v)))continue;
-  if(norm(r[0])||!norm(r[1])||!norm(r[2])||r.slice(13).some(v=>norm(v))){
+  if(norm(r[0])||!norm(r[1])||r.slice(13).some(v=>norm(v))){
    throw Error(`第 ${i+1} 列不是支援的原始格式，請確認欄位`);
   }
   if(ignored.has(i+1)){
