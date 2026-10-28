@@ -156,6 +156,12 @@ function App() {
   const branches = [...branchRows].sort(compareBranches);
  const initialBranchReady=useInitialBranch(user?.uid,profile,branches,setBranchId);
   const work = useWorkTasks(profile);
+  // work-account-list-v1
+  const [workBranchId, setWorkBranchId] = useState("all");
+  useEffect(() => {
+    if (page === "work") setWorkBranchId("all");
+  }, [page, profile?.username]);
+
   const waiting = useWaitingList(profile,branches,page === "waiting" || page === "units");
   const [waitingFocus,setWaitingFocus] = useState<string|null>(null);
   const [activityCategory,setActivityCategory]=useState("all");
@@ -757,12 +763,10 @@ function App() {
                   <div className="filters">
                     <select
                       aria-label="選擇據點"
-                      value={branchId}
-                      onChange={(event)=>{setLoadAllUnits(false);setBranchId(event.target.value);}}
+                      value={page === "work" ? workBranchId : branchId}
+                      onChange={(event)=>{if(page === "work"){setWorkBranchId(event.target.value);}else{setLoadAllUnits(false);setBranchId(event.target.value);}}}
                     >
-                      <option value="all">
-                        全部可查看據點
-                      </option>
+                      <option value="all">{page === "work" ? "全部可查看待辦（跨據點）" : "全部可查看據點"}</option>
                       {branches
                         .filter((branch) => !branch.archived)
                         .map((branch) => (
@@ -1095,7 +1099,7 @@ function App() {
                 />
                 <LightInsights branches={visible} events={events} month={month} />
               </>}
-              {page === "work" && canWrite && <WorkTasks focus={workFocus} onFocus={()=>setWorkFocus(null)} profile={profile} directoryBranches={branches} branches={branches.filter(b=>!b.archived)} branchId={branchId} peopleUsers={users} onSelectBranch={setBranchId} {...work} />}
+              {page === "work" && canWrite && <WorkTasks focus={workFocus} onFocus={()=>setWorkFocus(null)} profile={profile} directoryBranches={branches} branches={branches.filter(b=>!b.archived)} branchId={workBranchId} peopleUsers={users} onSelectBranch={setWorkBranchId} {...work} />}
               {page === "targets" && <Targets
                 branches={branches.filter(b=>!b.archived && (branchId === "all" || b.id === branchId))}
                 month={month}
