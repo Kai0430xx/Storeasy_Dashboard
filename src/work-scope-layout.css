@@ -1,0 +1,32 @@
+/* work-scope-layout-v1 */
+.work-area > .work-filters {
+  align-items: center;
+  gap: 10px;
+}
+.work-area > .work-filters > .work-scope-select {
+  flex: 0 1 230px;
+  width: 230px;
+  max-width: 100%;
+  min-width: 0;
+  height: 42px;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 8px 12px;
+}
+.work-area > .work-filters > .clearable-search input {
+  height: 42px;
+  box-sizing: border-box;
+}
+.work-area > .work-filters > label {
+  margin: 0;
+  white-space: nowrap;
+}
+@media (max-width: 760px) {
+  .work-area > .work-filters > .work-scope-select,
+  .work-area > .work-filters > .clearable-search {
+    flex: 1 1 100%;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+  }
+}

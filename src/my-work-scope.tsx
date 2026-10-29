@@ -1,3 +1,4 @@
+import './work-scope-layout.css';
 import {useEffect,useState} from 'react';
 import {collection,onSnapshot,query,where} from 'firebase/firestore';
 import {auth,db} from './firebase';
@@ -55,18 +56,10 @@ export function WorkScopePicker({scope,onChange}:{
  scope:string;
  onChange:(value:string)=>void;
 }){
- return <label style={{
-  display:'flex',
-  flexDirection:'column',
-  gap:6,
-  minWidth:0,
-  maxWidth:'100%'
- }}>
-  待辦範圍
-  <select aria-label="待辦範圍" value={scope}
-   onChange={e=>onChange(e.target.value)}>
-   <option value="mine">我的據點＋指派給我</option>
-   <option value="all">全部可查看待辦</option>
-  </select>
- </label>;
+ return <select className="work-scope-select"
+  aria-label="待辦範圍" title="待辦範圍"
+  value={scope} onChange={e=>onChange(e.target.value)}>
+  <option value="mine">我的據點＋指派給我</option>
+  <option value="all">全部可查看待辦</option>
+ </select>;
 }
