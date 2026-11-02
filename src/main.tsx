@@ -1492,7 +1492,7 @@ function App() {
                         </li>
                         <li>
                           只匯入已結算月份，
-                          不覆蓋即時操作紀錄
+                          可覆蓋月統計，以本次 KPI 為準；逐筆異動紀錄保留
                         </li>
                       </ul>
                       {canWrite && (
@@ -2723,7 +2723,7 @@ function LegacyImportForm({
             <>
               <h3>
                 已結算月份：{preview.months.length} 筆
-              </h3>
+              </h3><p className="hint">此處所列月份將以本次 KPI 覆蓋既有月統計及金額，不會加總即時筆數；原倉位現況與逐筆異動紀錄保留。</p>
               <p className="hint">
                 排除本月及未來月份 {preview.excluded} 筆。
                 缺少的續約或承租數量保留為無資料。
@@ -2770,7 +2770,12 @@ function LegacyImportForm({
               busy ||
               (kind === "kpi" && !preview.months.length)
             }
-            onClick={() => onSubmit(preview)}
+            onClick={() => {
+          if(kind === "kpi" && !window.confirm(
+            "KPI 覆蓋確認：本次檔案所列的已結算月份將以檔案為準，覆蓋原月統計、金額及續約分項；缺少的項目不沿用舊值。原倉位現況與逐筆異動紀錄保留。確定匯入？"
+          ))return;
+          onSubmit(preview);
+        }}
           >
             {busy ? "正在匯入…" : "確認匯入"}
           </button>

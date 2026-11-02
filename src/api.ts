@@ -16,7 +16,6 @@ import { removeImport, sourceFiles } from "./import-actions";
 import {
   pricingUpdate,
   priceSnapshot,
-  frozenAmounts,
 } from "./pricing.js";
 
 import {
@@ -1132,7 +1131,7 @@ await runTransaction(db, async (transaction) => {
 
       const seen = new Set();
 
-      const existingMonths = new Map<string, any>();
+      
       for (const month of months) {
         if (
           !/^\d{4}-(0[1-9]|1[0-2])$/.test(
@@ -1191,34 +1190,8 @@ await runTransaction(db, async (transaction) => {
           );
         }
 
-        for (const month of months) {
-          const old =
-            await transaction.get(
-              doc(
-                db,
-                "branches",
-                data.branchId,
-                "months",
-                month.month
-              )
-            );
-
-          existingMonths.set(
-            month.month,
-            old.data()
-          );
-
-          if (
-            old.exists() &&
-            old.data().source !== "import"
-          ) {
-            throw new Error(
-              `${month.month} 已有即時紀錄，不能覆蓋`
-            );
-          }
-        }
-
-        for (const month of months) {
+        // kpi-authoritative-v1: imported totals are authoritative.
+for (const month of months) {
           transaction.set(
             doc(
               db,
@@ -1233,21 +1206,13 @@ await runTransaction(db, async (transaction) => {
               rented: month.rented,
               new: month.new,
               renew: month.renew,
-              renewByTerm: validateRenewCounts(month.renewByTerm,month.renew) || existingMonths.get(month.month)?.renewByTerm || null,
+              renewByTerm: validateRenewCounts(month.renewByTerm,month.renew) || null,
               exit: month.exit,
               kpiMetrics: month.kpiMetrics || {revenue:null,performance:null,occupancy:null},
-              amounts: frozenAmounts(
-                existingMonths.get(month.month),
-                month.amounts
-              ),
+              amounts: month.amounts || {},
               source: "import",
               sourceFile: files.kpi,
-              amountSourceFile:
-                existingMonths.get(month.month)?.amounts &&
-                Object.keys(existingMonths.get(month.month).amounts).length
-                  ? existingMonths.get(month.month).amountSourceFile ||
-                    "舊資料未記錄檔名"
-                  : files.kpi,
+              amountSourceFile: files.kpi,
               updatedBy: me,
               updatedAt: time()
             }
