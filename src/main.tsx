@@ -1,3 +1,5 @@
+import {activityCopyDraft} from './activity-copy.js';
+// activity-copy-v1
 import BulkUnits,{BulkUnitCheck} from "./BulkUnits";
 import ActivitySupplement from "./ActivitySupplement";
 import useInitialBranch from "./use-initial-branch";
@@ -1401,8 +1403,7 @@ function App() {
                                 ),
                               ).length} 次使用
                             </button>
-                            {canWrite && (
-                              <button
+                            {canWrite && (<><button type="button" className="text-button" onClick={()=>setModal(activityCopyDraft(activity))}>複製活動</button><button
                                 className="text-button"
                                 onClick={() =>
                                   setModal({
@@ -1412,8 +1413,7 @@ function App() {
                                 }
                               >
                                 編輯活動
-                              </button>
-                            )}
+                              </button></>)}
                           </div>
                         </section>
                       ))}
@@ -1726,7 +1726,7 @@ function App() {
                   password: "更改密碼",
                   branch: "據點資料",
                   event: `登記${types[modal.type]}`,transfer: `登記${types[modal.type]}`,
-                  activity: "活動設定",
+                  activity: modal.copy ? "複製活動" : "活動設定",
                       activityUsage: "活動使用明細",
                   rentalDetails: "承租動態明細",
                   chooseActivityDelete: "選擇要刪除的活動",
@@ -1963,17 +1963,20 @@ function App() {
 
             {modal.kind === "activity" && (
               <form
-                onSubmit={(event) =>
-                  submit(event, (form) =>
-                    call("saveActivity", {
-                      ...form,
-                      id: modal.id,
-                      branchId: modal.branchId,
-                    }),
-                  )
-                }
+                onSubmit={(event) => submit(event, async (form) => {
+          await call("saveActivity", {
+            ...form,
+            id: modal.copy ? undefined : modal.id,
+            branchId: modal.branchId,
+          });
+          if(modal.copy){
+            setMonth(String(form.month));
+            setActivityCategory("all");
+          }
+        })}
               >
-                <label>
+                {modal.copy&&<p className="hint">選擇要複製到的月份，可修改名稱、分類與說明。只建立新活動，不複製使用倉位、次數或任何使用紀錄。</p>}
+<label>
                   活動月份
                   <input
                     name="month"
