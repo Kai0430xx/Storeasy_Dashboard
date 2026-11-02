@@ -55,7 +55,7 @@ export default function Targets({branches,month,profile,data}:{branches:Row[];mo
     <div className="table-wrap"><table><thead><tr><th>指標</th><th>目標</th><th>實際</th><th>結果</th></tr></thead><tbody>
      {(monthly?.occupancy!=null)&&<tr><td>出租率</td><td>{monthly?.occupancy==null?'未設定':percent(monthly.occupancy)}</td><td>{percent(occupancy)}</td><td>{result(occupancy,monthly?.occupancy)}</td></tr>}
      {(monthly?.performance!=null)&&<tr><td>業績完成率</td><td>{monthly?.performance==null?'未設定':percent(monthly.performance)}</td><td>{percent(metrics.performance)}</td><td>{result(metrics.performance,monthly?.performance)}</td></tr>}
-     {(monthly?.referrals!=null||ref?.count>0)&&<tr><td>轉介數量</td><td>{monthly?.referrals??'未設定'}</td><td>{ref?.count??'未填寫'} {ref?.count>3&&<span className="referral-bonus">超過 3 筆・年終加成</span>}</td><td>{result(ref?.count,monthly?.referrals)}{monthly?.referrals!=null&&!ref&&'・必填'}</td></tr>}
+     {(monthly?.referrals!=null||ref?.count>0)&&<tr><td>轉介數量</td><td>{monthly?.referrals??'未設定'}</td><td>{ref?.count??'未填寫'} </td><td>{result(ref?.count,monthly?.referrals)}{monthly?.referrals!=null&&!ref&&'・必填'}</td></tr>}
      {Object.keys(monthly?.other||{}).length>0&&<tr><td>其它</td><td colSpan={3}><OtherGoalResults goals={monthly.other} actuals={r.actuals?.find((a:Row)=>a.id===month)?.other} future={month>today.slice(0,7)}/></td></tr>}
     </tbody></table></div>
     <p className="hint">KPI 來源：{kpi?.sourceFile||'待匯入'}。{metrics.revenue!=null&&`當年當月業績：NT$ ${Number(metrics.revenue).toLocaleString()}`} 舊 KPI 若未含完成率，請重新匯入原檔。</p>
@@ -86,7 +86,7 @@ export default function Targets({branches,month,profile,data}:{branches:Row[];mo
     {editing.period.length===7&&<OtherGoalEditor value={editing.values.other||{}} disabled={busy} onChange={other=>setEditing(v=>v?{...v,values:{...v.values,other}}:v)}/>}
     <button className="primary" disabled={busy}>儲存目標</button>
    </form>:<form onSubmit={e=>{e.preventDefault();run(()=>saveReferrals(editing.branch.id,month,entries));}}>
-    <p>轉介 {entries.length} 筆 {entries.length>3?'・超過 3 間，年終加成':''}</p>
+    <p>轉介 {entries.length} 筆 </p>
     {entries.map((entry,i)=><fieldset key={i}><legend>第 {i+1} 筆</legend><label>倉位編號<input required maxLength={80} value={entry.code} onChange={e=>setEntries(v=>v.map((x,j)=>j===i?{...x,code:e.target.value}:x))}/></label><label>租期<input required placeholder="2026/10/08－2027/04/07" value={entry.leasePeriod} onChange={e=>setEntries(v=>v.map((x,j)=>j===i?{...x,leasePeriod:e.target.value}:x))}/></label><button type="button" onClick={()=>setEntries(v=>v.filter((_,j)=>j!==i))}>移除此筆</button></fieldset>)}
     <button type="button" disabled={entries.length>=200} onClick={()=>setEntries(v=>[...v,{code:'',leasePeriod:''}])}>新增轉介明細</button><button className="primary" disabled={busy}>儲存 {entries.length} 筆轉介</button>
    </form>}

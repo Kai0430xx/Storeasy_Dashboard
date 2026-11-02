@@ -686,3 +686,10 @@ manualPages.find(p => p.id === 'activities')?.topics.push({
  ],
  result:'只複製活動名稱、說明與分類，不複製活動 ID、使用倉位、使用次數、歷史承租／續約、待收款或補登活動紀錄；原活動與原紀錄保留。'
 });
+
+// remove-referral-bonus-text-v1
+manualPages.find(p => p.id === 'targets')?.topics.push({
+ title:'轉介數量與達標顯示',
+ steps:['轉介欄保留實際筆數、設定目標與達標結果，不另顯示加成文字提示。轉介編輯視窗及之後匯出的年度 Excel 也不再顯示該提示。'],
+ result:'只移除提示文字與 Excel 提示欄，不更動轉介紀錄、數量、目標或達標計算。已下載的舊 Excel 不會自動更新。'
+});

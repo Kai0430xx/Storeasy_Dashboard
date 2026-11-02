@@ -19,7 +19,7 @@ export function annualExportRows(branches:Row[],records:Row,year:string,today:st
   if(notOpen){statuses.fill('未開幕');for(const g of other)g.result='未開幕';}
   const required=[...statuses,...other.map((v:Row)=>v.result)].filter(s=>s!=='未設定');
   const overall=notOpen?'未開幕':!required.length?'未設定':future?'尚未到月份':required.some(s=>s==='待匯入 KPI'||s==='轉介未填'||s==='待填寫')?'資料未齊':required.every(s=>s==='達標')?'達標':'未達標';
-  output.push({notOpen,other,branchId:b.id,name:b.name,month,occupancyTarget:goal?.occupancy??null,occupancy,occupancyResult:statuses[0],performanceTarget:goal?.performance??null,performance,performanceResult:statuses[1],referralTarget:goal?.referrals??null,referrals:ref?.count??null,referralResult:statuses[2],overall,bonus:ref?.count>3?'超過 3 筆・年終加成':'',kpiFile:(kpi?.sourceFile||'未匯入')+(kpi?.manualActuals?'（手動修正：'+(r.actuals?.find((a:Row)=>(a.id||a.month)===month)?.reason||'')+'）':'')});
+  output.push({notOpen,other,branchId:b.id,name:b.name,month,occupancyTarget:goal?.occupancy??null,occupancy,occupancyResult:statuses[0],performanceTarget:goal?.performance??null,performance,performanceResult:statuses[1],referralTarget:goal?.referrals??null,referrals:ref?.count??null,referralResult:statuses[2],overall,bonus:'',kpiFile:(kpi?.sourceFile||'未匯入')+(kpi?.manualActuals?'（手動修正：'+(r.actuals?.find((a:Row)=>(a.id||a.month)===month)?.reason||'')+'）':'')});
  }
  return output;
 }
@@ -35,7 +35,7 @@ export async function createAnnualWorkbook(branches:Row[],records:Row,year:strin
   selected.forEach((r,i)=>{if(r.bonus){const cell=row.getCell(i*2+3);cell.font={bold:true,color:{argb:'FFB91C1C'}};cell.note=r.bonus;}});
  }
  const details=book.addWorksheet('每月目標明細');
- details.columns=[{header:'據點',key:'name',width:20},{header:'月份',key:'month',width:13},{header:'出租率目標',key:'occupancyTarget',width:16},{header:'實際出租率',key:'occupancy',width:16},{header:'出租率結果',key:'occupancyResult',width:18},{header:'業績完成率目標',key:'performanceTarget',width:20},{header:'實際業績完成率',key:'performance',width:20},{header:'業績結果',key:'performanceResult',width:18},{header:'轉介目標',key:'referralTarget',width:14},{header:'轉介數量',key:'referrals',width:14},{header:'轉介結果',key:'referralResult',width:18},{header:'整體月目標結果',key:'overall',width:20},{header:'轉介加成提示',key:'bonus',width:26},{header:'KPI 來源檔案',key:'kpiFile',width:40}];
+ details.columns=[{header:'據點',key:'name',width:20},{header:'月份',key:'month',width:13},{header:'出租率目標',key:'occupancyTarget',width:16},{header:'實際出租率',key:'occupancy',width:16},{header:'出租率結果',key:'occupancyResult',width:18},{header:'業績完成率目標',key:'performanceTarget',width:20},{header:'實際業績完成率',key:'performance',width:20},{header:'業績結果',key:'performanceResult',width:18},{header:'轉介目標',key:'referralTarget',width:14},{header:'轉介數量',key:'referrals',width:14},{header:'轉介結果',key:'referralResult',width:18},{header:'整體月目標結果',key:'overall',width:20},{header:'KPI 來源檔案',key:'kpiFile',width:40}];
  for(const r of rows){const value={...r};for(const key of ['occupancyTarget','occupancy','performanceTarget','performance'])value[key]=r[key]==null?'—':r[key]/100;value.referralTarget=r.referralTarget??'未設定';value.referrals=r.referrals??'';const row=details.addRow(value);if(r.bonus)for(const i of [10,13])row.getCell(i).font={bold:true,color:{argb:'FFB91C1C'}};}
  for(const column of [3,4,6,7])details.getColumn(column).numFmt='0.00%';
  summary.columns.forEach((c,i)=>{c.width=i===0?20:17;});
@@ -43,7 +43,7 @@ export async function createAnnualWorkbook(branches:Row[],records:Row,year:strin
  otherSheet.columns=[{header:'據點',key:'name',width:20},{header:'月份',key:'month',width:13},{header:'目標名稱',key:'goalName',width:30},{header:'目標數量',key:'target',width:16},{header:'實際數量',key:'actual',width:16},{header:'達標結果',key:'result',width:18}];
  for(const r of rows)for(const g of r.other)otherSheet.addRow({name:r.name,month:r.month,goalName:g.name,target:g.target,actual:g.actual??'未填',result:g.result});
  for(const sheet of [summary,details,otherSheet]){sheet.views=[{state:'frozen',xSplit:1,ySplit:1}];sheet.autoFilter={from:{row:1,column:1},to:{row:sheet.rowCount,column:sheet.columnCount}};sheet.getRow(1).height=28;sheet.getRow(1).eachCell(c=>{c.font={bold:true,color:{argb:'FFFFFFFF'}};c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF193F72'}};});}
- const notes=book.addWorksheet('說明');notes.addRows([['報表年度',year],['匯出日期（台灣）',today],['範圍','所有有權限查看且未封存的據點，不受畫面單一據點篩選影響'],['達標規則','月目標有設定的各項指標全部達標，整體才列為達標；有缺值列為資料未齊。'],['資料來源','出租率與業績完成率使用匯入 KPI；轉介使用各月手填明細數量；其它目標使用店長手填實際數量，達到目標數量即達標。'],['缺值','未設定目標、未匯入 KPI、未填轉介與未到月份會分別標示，不當成 0。'],['轉介提示','當月超過 3 筆以紅字標示年終加成，未自行計算獎金。'],['年度目標','本報表比較每月目標，不以年度目標代替未設定的月目標。']]);notes.getColumn(1).width=24;notes.getColumn(2).width=100;
+ const notes=book.addWorksheet('說明');notes.addRows([['報表年度',year],['匯出日期（台灣）',today],['範圍','所有有權限查看且未封存的據點，不受畫面單一據點篩選影響'],['達標規則','月目標有設定的各項指標全部達標，整體才列為達標；有缺值列為資料未齊。'],['資料來源','出租率與業績完成率使用匯入 KPI；轉介使用各月手填明細數量；其它目標使用店長手填實際數量，達到目標數量即達標。'],['缺值','未設定目標、未匯入 KPI、未填轉介與未到月份會分別標示，不當成 0。'],['年度目標','本報表比較每月目標，不以年度目標代替未設定的月目標。']]);notes.getColumn(1).width=24;notes.getColumn(2).width=100;
  for (const sheet of book.worksheets) {
   if (sheet.name === '說明') continue;
   sheet.eachRow((row, rowNumber) => {
