@@ -693,3 +693,18 @@ manualPages.find(p => p.id === 'targets')?.topics.push({
  steps:['轉介欄保留實際筆數、設定目標與達標結果，不另顯示加成文字提示。轉介編輯視窗及之後匯出的年度 Excel 也不再顯示該提示。'],
  result:'只移除提示文字與 Excel 提示欄，不更動轉介紀錄、數量、目標或達標計算。已下載的舊 Excel 不會自動更新。'
 });
+
+// responsive-width-v1-manual
+manualPages.find(p => p.id === 'dashboard')?.topics.push({
+ title:'依視窗寬度自動調整排版',
+ steps:['縮放瀏覽器或調整視窗大小時，頁面留白、篩選列、工具列與活動卡片會依可用寬度調整；彈出視窗限制在畫面內。'],
+ result:'不需依電腦手動設定版型，不會改變資料、權限或篩選結果。'
+});
+manualPages.find(p => p.id === 'waiting')?.topics.push({
+ title:'候補清單自動切換表格與卡片',
+ steps:[
+  '清單可用寬度足夠時使用表格；不足時自動切換卡片，包含小螢幕電腦及放大後的視窗。',
+  '日期和前方勾選框保持同一行；卡片中姓名在左、日期在右，候補據點獨立一排。'
+ ],
+ result:'仍可勾選已讀、開啟候補及查看配對；只調整顯示排版。'
+});

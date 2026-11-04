@@ -2811,3 +2811,5 @@ createRoot(
 // storeasy-display-cleanup-v1
 
 import './unit-table-fit.css';
+
+import './responsive-width.css';
