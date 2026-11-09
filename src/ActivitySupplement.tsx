@@ -130,7 +130,7 @@ export default function ActivitySupplement({unit}:{unit:Row}){
       await supplementActivity({
        branchId:unit.branchId,code:unit.code,activityId:selected
       });
-      setSelected('');setMessage('當月活動已補登');
+      setSelected('');setMessage('');
      }catch(e){
       setMessage(e instanceof Error?e.message:String(e));
      }finally{setBusy(false);}

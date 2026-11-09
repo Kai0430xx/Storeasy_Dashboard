@@ -19,3 +19,7 @@
 .calendar-week>.calendar-span{align-self:stretch;z-index:1;width:auto;max-width:none;margin:1px 2px;padding:2px 5px;height:22px;min-height:0;line-height:18px;overflow:hidden;font-size:12px}.calendar-span.continues-before{margin-left:0;border-top-left-radius:0;border-bottom-left-radius:0}.calendar-span.continues-after{margin-right:0;border-top-right-radius:0;border-bottom-right-radius:0}
 .calendar-week .calendar-more{position:absolute;bottom:2px;left:2px;right:2px;min-width:0;text-align:left;justify-content:flex-start;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;height:22px;line-height:18px;padding:2px;font-size:11px}
 @media(max-width:760px){.calendar-week{grid-template-rows:30px repeat(3,23px) minmax(24px,1fr);min-height:124px}.calendar-week>.calendar-span{font-size:11px;padding:2px 3px;height:21px;margin-top:1px;margin-bottom:1px}.calendar-week .calendar-more{font-size:10px}.calendar-week>.calendar-day{padding:3px 1px}}
+
+/* calendar-optional-end-v4 */
+.calendar-date-heading{display:flex;align-items:center;gap:3px;min-width:0;height:28px}.calendar-date-heading .calendar-date{flex:0 0 28px;margin:0}.calendar-holiday-name{display:block;min-width:0;flex:1;color:#c62828;font-size:11px;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:760px){.calendar-date-heading{height:24px;gap:1px}.calendar-date-heading .calendar-date{flex-basis:20px;width:20px;height:24px;font-size:12px}.calendar-holiday-name{font-size:10px}}

@@ -82,6 +82,6 @@ export default function OwnNotificationBranches({uid}:{uid:string}){
   </button>
 
   {error&&<p role="alert">{error}</p>}
-  {notice&&<p role="status">{notice}</p>}
+  
  </fieldset>;
 }

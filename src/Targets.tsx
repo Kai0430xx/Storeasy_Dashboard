@@ -20,7 +20,7 @@ export default function Targets({branches,month,profile,data}:{branches:Row[];mo
  async function run(fn:()=>Promise<unknown>){setBusy(true);setError('');try{await fn();setEditing(null);setNotice('已儲存');}catch(e){setError(e instanceof Error?e.message:String(e));}finally{setBusy(false);}}
  return <>
   <header className="page-header"><div><p>依上方選取月份查看月度目標及該年度進度。目標修改會保留紀錄。</p></div></header>
-  {error&&<div role="alert" className="alert error">{error}</div>}{notice&&<div role="status" className="alert success">{notice}</div>}
+  {error&&<div role="alert" className="alert error">{error}</div>}
   {!branches.length&&<p>尚無可查看據點</p>}
   <GoalsOverview
     branches={branches}

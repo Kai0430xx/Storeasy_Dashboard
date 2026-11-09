@@ -32,7 +32,7 @@ export default function GoalsOverview({branches,records:supplied,data,month,glob
  async function loadDraft(list:Row[],p:string){const rows=await Promise.all(list.map(async b=>{const s=await getDoc(doc(db,'branches',b.id,'targets',p));const g=s.data();return [b.id,{...Object.fromEntries(keys.map(k=>[k,g?.[k]??''])),other:g?.other||{}}] as const;}));setDraft(Object.fromEntries(rows));}
  async function open(){setBusy(true);setMessage('');try{const s=await getDocs(collection(db,'branches'));const list=s.docs.map(d=>({id:d.id,...d.data()})).filter((b:Row)=>!b.archived).sort(compareBranches);if(!list.length)throw Error('尚無據點');await loadDraft(list,month);setPeriod(month);setAll(list);}catch(e){setMessage(e instanceof Error?e.message:String(e));}finally{setBusy(false);}}
  async function changePeriod(p:string){if(!all)return;setBusy(true);setMessage('');try{await loadDraft(all,p);setPeriod(p);}catch(e){setMessage(String(e));}finally{setBusy(false);}}
- async function apply(e:React.FormEvent<HTMLFormElement>){e.preventDefault();if(!all)return;setBusy(true);let completed=0;const failed:string[]=[];for(const b of all){try{await saveGoal(b.id,period,draft[b.id]);completed++;}catch(err){failed.push(`${b.name}：${err instanceof Error?err.message:String(err)}`);}setMessage(`已處理 ${completed+failed.length}/${all.length} 間`);}setBusy(false);setMessage(`成功 ${completed} 間${failed.length?`；失敗 ${failed.length} 間：${failed.join('；')}`:''}`);if(!failed.length)setAll(null);}
+ async function apply(e:React.FormEvent<HTMLFormElement>){e.preventDefault();if(!all)return;setBusy(true);let completed=0;const failed:string[]=[];for(const b of all){try{await saveGoal(b.id,period,draft[b.id]);completed++;}catch(err){failed.push(`${b.name}：${err instanceof Error?err.message:String(err)}`);}setMessage(`已處理 ${completed+failed.length}/${all.length} 間`);}setBusy(false);setMessage(failed.length?`成功 ${completed} 間；失敗 ${failed.length} 間：${failed.join('；')}`:'');if(!failed.length)setAll(null);}
  return <section className="panel target-panel">
   <div className="panel-heading"><h2>目標與轉介概況</h2>{global&&<button disabled={busy} onClick={async()=>{
       setBusy(true);
@@ -40,7 +40,7 @@ export default function GoalsOverview({branches,records:supplied,data,month,glob
       try {
         const {exportAnnualTargets}=await import("./annual-export");
         await exportAnnualTargets(year);
-        setMessage(`${year} 年度 Excel 已匯出`);
+        setMessage("");
       } catch(e) {
         setMessage(e instanceof Error?e.message:String(e));
       } finally {

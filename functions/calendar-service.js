@@ -59,8 +59,8 @@ export function createCalendarService(db){
    if(existing.exists){if(existing.data().requesterId!==uid)fail('申請編號已使用');return {id:ref.id};}
    if(e.revision!==data.revision)fail('行程已變更，請重新開啟再申請');
    const proposed=await inputs(tx,data.values,e.ownerId,e.categoryId);
-   if(eventFields.every(k=>JSON.stringify(e[k])===JSON.stringify(proposed[k])))fail('尚未修改任何欄位');
-   tx.set(ref,{eventId:data.eventId,eventTitle:e.title,ownerId:e.ownerId,requesterId:uid,requesterName:p.username||'',baseRevision:e.revision,before:{...Object.fromEntries(eventFields.map(k=>[k,e[k]])),categoryName:e.categoryName},proposed,syncTask:!!data.syncTask,status:'pending',seen:false,createdAt:stamp()});return {id:ref.id};
+   if(eventFields.every(k=>JSON.stringify(k==='endDateUnset'?!!e[k]:e[k])===JSON.stringify(proposed[k])))fail('尚未修改任何欄位');
+   tx.set(ref,{eventId:data.eventId,eventTitle:e.title,ownerId:e.ownerId,requesterId:uid,requesterName:p.username||'',baseRevision:e.revision,before:{...Object.fromEntries(eventFields.map(k=>[k,k==='endDateUnset'?!!e[k]:e[k]])),categoryName:e.categoryName},proposed,syncTask:!!data.syncTask,status:'pending',seen:false,createdAt:stamp()});return {id:ref.id};
   });
  }
  async function review(uid,p,data){

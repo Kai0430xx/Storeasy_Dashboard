@@ -144,7 +144,7 @@ export default function NotificationCenter({
     </p>
 
     {error&&<p role="alert" className="alert error">{error}</p>}
-    {notice&&<p role="status" className="alert success">{notice}</p>}
+    
 
     <div className="notification-actions">
      <button type="button" className="primary"

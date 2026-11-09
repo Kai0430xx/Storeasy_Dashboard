@@ -697,14 +697,7 @@ function App() {
             </div>
           )}
 
-          {notice && (
-            <div role="status" className="alert success">
-              {notice}
-              <button onClick={() => setNotice("")}>
-                <X size={16} />
-              </button>
-            </div>
-          )}
+          
 
           {!profile ? (
             <section className="panel empty">

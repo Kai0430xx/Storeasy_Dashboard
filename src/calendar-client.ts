@@ -15,7 +15,7 @@ export function useCalendarAlerts(uid:string|undefined,enabled:boolean){
  const unread=rows.filter(r=>r.ownerId===uid&&r.status==='pending'||r.requesterId===uid&&r.status!=='pending'&&!r.seen);
  return {rows,pending,unread,count:unread.length,error};
 }
-export const freshCalendar=(date=calToday()):CalRow=>({id:'evt_'+crypto.randomUUID(),title:'',startDate:date,endDate:date,startTime:'09:00',endTime:'10:00',allDay:false,categoryId:'',notes:'',viewerIds:[],revision:0});
+export const freshCalendar=(date=calToday()):CalRow=>({id:'evt_'+crypto.randomUUID(),title:'',startDate:date,endDate:'',endDateUnset:true,startTime:'09:00',endTime:'',allDay:false,categoryId:'',notes:'',viewerIds:[],revision:0});
 export async function createWorkOnCalendar(profile:CalRow,input:CalRow){
  const result=await calendarCall({action:'createWork',operationId:input.calendarDraft.operationId,task:input});return result.count as number;
 }

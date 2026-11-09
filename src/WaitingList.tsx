@@ -59,7 +59,7 @@ export default function WaitingList({profile,branches,branchId,state,focus,onFoc
  async function status(r:Row,next:string){if(busy)return;setPendingStatus(v=>({...v,[r.id]:next}));setBusy(true);setError('');try{await saveWaiting({...r,status:next},r.id,r.revision);}catch(e:any){setPendingStatus(v=>{const n={...v};delete n[r.id];return n;});setError(e.message);}finally{setBusy(false);}}
  async function remove(r:Row){if(!window.confirm(`確定刪除「${r.name}」的候補紀錄？刪除後無法還原。`))return;setBusy(true);setError('');try{await deleteWaiting(r);setSelected(null);}catch(e:any){setError(e.message);}finally{setBusy(false);}}
  return <>
-  {savedNotice&&!edit&&<div className="alert success" role="status">{savedNotice}<button aria-label="關閉儲存提示" onClick={()=>setSavedNotice('')}>×</button></div>}
+  
   {(state.error||state.syncError||directory.error)&&<div role="alert" className="alert error">{state.error||state.syncError||directory.error}{state.syncError&&<button onClick={state.retrySync}>重試空倉同步</button>}</div>}
   {error&&!edit&&<div role="alert" className="alert error">{error}</div>}
   <div className="toolbar"><div className="waiting-status-tabs">{['waiting','rented','cancelled','all'].map(s=><button key={s} className={filter===s?'primary':'secondary'} onClick={()=>setFilter(s)}>{s==='waiting'?'候補中':labels[s]||'全部'}</button>)}</div><button className="primary" onClick={()=>startEdit()}><Plus size={16}/>新增候補</button></div>

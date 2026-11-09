@@ -288,9 +288,7 @@ export default function BranchCheers({branches}:{branches:Row[]}){
      </p>
     }
 
-    {notice&&
-     <p role="status" className="alert success">{notice}</p>
-    }
+    
 
     <div className="cheer-actions">
      <button type="submit" className="primary"
