@@ -101,7 +101,7 @@ self.addEventListener('push',event=>
 
     const target=new URL(self.registration.scope);
     target.hash=value.count
-      ? (value.page==='waiting'?'waiting':'work')
+      ? (value.page==='calendar'?'calendar':value.page==='waiting'?'waiting':'work')
       : 'dashboard';
 
     await self.registration.showNotification(

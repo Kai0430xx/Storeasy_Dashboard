@@ -1,3 +1,4 @@
+import {createWorkOnCalendar} from './calendar-client';
 import {useEffect,useState} from 'react';
 import {collection,doc,query,where,onSnapshot,runTransaction,serverTimestamp,Timestamp,orderBy,limit,getDocs,getDocFromServer} from 'firebase/firestore';
 import {auth,db} from './firebase';
@@ -70,6 +71,7 @@ async function assignmentWrites(tx:any,taskId:string,thread:string,before:any,af
  return writes;
 }
 export async function createWorkTasks(profile:WorkRow,input:WorkRow){
+ if(input.calendarDraft)return createWorkOnCalendar(profile,input);
  const who=actor(profile),ids=[...new Set<string>(input.branchIds)];if(!ids.length||ids.length>100)throw new Error('請選擇1～100個據點');
  const groups=input.mode==='separate'?ids.map(id=>[id]):[ids];let created=0;
  try{for(const branchIds of groups){

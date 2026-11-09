@@ -45,6 +45,7 @@ export function createNotificationEngine({db,keys,site,send}){
   }
 
   async function loadWork(uid,p){
+ if(p.role==='employee')return {count:0,keys:[]};
     const map=new Map();
     const add=s=>docs(s).forEach(d=>map.set(d.id,d));
     const ids=p.branchIds||[];
@@ -137,7 +138,7 @@ return workUnread(live,reads,uid);
   }
 
   async function loadWaiting(uid,p,epoch){
-    if(!enabled(p)||!(p.branchIds||[]).length)return {count:0,keys:[]};
+    if(p.role==='employee'||!enabled(p)||!(p.branchIds||[]).length)return {count:0,keys:[]};
 
     const map=new Map();
     const add=s=>docs(s).forEach(d=>map.set(d.id,d));
@@ -177,7 +178,11 @@ return workUnread(live,reads,uid);
     );
   }
 
-  async function work(uid){
+  async function loadCalendar(uid){
+ const map=new Map();for(const field of ['ownerId','requesterId'])for(const d of (await db.collection('calendarRequests').where(field,'==',uid).get()).docs)map.set(d.id,{id:d.id,...d.data()});
+ const keys=[...map.values()].filter(r=>r.ownerId===uid&&r.status==='pending'||r.requesterId===uid&&r.status!=='pending'&&!r.seen).map(r=>r.id+':'+r.status).sort();return {count:keys.length,keys};
+}
+async function work(uid){
     const lock=db.doc('pushLocks/'+uid);
     const token=randomUUID();
 
@@ -225,6 +230,8 @@ return workUnread(live,reads,uid);
           : {count:old.waitingCount||0,keys:null}
       ]):[{count:0,keys:[]},{count:0,keys:[]}];
 
+      const c=active?(q.calendar||!previous.exists?await loadCalendar(uid):{count:old.calendarCount||0,keys:null}):{count:0,keys:[]};
+      const cf=c.keys?hash(JSON.stringify(c.keys)):old.calendarFingerprint;
       const wf=w.keys
         ? hash(JSON.stringify(w.keys))
         : old.workFingerprint;
@@ -235,11 +242,12 @@ return workUnread(live,reads,uid);
       const changed=!previous.exists||
         wf!==old.workFingerprint||
         vf!==old.waitingFingerprint||
-        active!==old.enabled;
+        active!==old.enabled||cf!==old.calendarFingerprint;
 
       const version=changed?(old.version||0)+1:old.version;
       const state={
-        count:w.count+v.count,
+        count:w.count+v.count+c.count,
+        calendarCount:c.count,
         workCount:w.count,
         waitingCount:v.count,
         version,
@@ -252,6 +260,7 @@ return workUnread(live,reads,uid);
           ...state,
           workFingerprint:wf,
           waitingFingerprint:vf,
+          calendarFingerprint:cf,
           updatedAt:timestamp()
         });
         batch.set(db.doc('pushStatus/'+uid),{
@@ -277,7 +286,7 @@ return workUnread(live,reads,uid);
                 version,
                 count:state.count,
                 enabled:active,silent:!q.notify,
-                page:state.workCount?'work':'waiting',
+                page:state.calendarCount?'calendar':state.workCount?'work':'waiting',
                 url:url.href
               }),
               {

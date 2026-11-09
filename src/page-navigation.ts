@@ -1,6 +1,6 @@
 import {useCallback,useEffect,useState} from 'react';
 
-const pages = ['dashboard','units','activities','imports','targets','waiting','work','users','manual','cheers'];
+const pages = ['calendar','dashboard','units','activities','imports','targets','waiting','work','users','manual','cheers'];
 
 function readPage(){
  const page = window.location.hash.slice(1);

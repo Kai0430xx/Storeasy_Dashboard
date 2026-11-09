@@ -104,12 +104,12 @@ export default function NotificationCenter({
     {inbox?.(()=>setOpen(false))}
 
     <p>
-     沒開網頁時，也能收到待辦與所屬據點候補提醒。
+     沒開網頁時，也能收到日曆修改申請與結果；待辦與候補依原權限提醒。
      桌面圖示數字依系統支援顯示，每筆只算一次。
     </p>
 
     <p className="hint">
-     {role==='manager'
+     {role==='employee' ? '一般員工可接收自己的日曆修改申請與審核結果。' : role==='manager'
       ? '候補據點包含所屬分店才會提醒；待辦依可查看事項的未讀紅點。'
       : '待辦只有明確指派給你才通知；候補只通知你負責的據點，包含配對黃點與到期紅點。'}
     </p>

@@ -1,3 +1,4 @@
+import {createCalendarService} from './calendar-service.js';
 
 import {createNotificationEngine} from './notification-engine.js';
 import {initializeApp} from 'firebase-admin/app';
@@ -88,7 +89,7 @@ function originCheck(request){
 }
 
 async function enqueue(
-  uid,flags={work:true,waiting:true},stockEpoch=0
+  uid,flags={work:true,waiting:true,calendar:true},stockEpoch=0
 ){
   await db.runTransaction(async tx=>{
     const ref=db.doc('pushQueue/'+uid);
@@ -106,7 +107,7 @@ async function enqueue(
 }
 
 async function enqueueRegistered(
-  uid,flags={work:true,waiting:true}
+  uid,flags={work:true,waiting:true,calendar:true}
 ){
   const devices=await db.collection('pushDevices')
     .where('uid','==',uid).limit(1).get();
@@ -404,4 +405,27 @@ export const pushOwnBranches=onCall(async request=>{
 
  await enqueueRegistered(uid);
  return {branchIds};
+});
+
+// calendar-v1
+const calendarService=createCalendarService(db);
+export const calendarAction=onCall(async request=>{
+ originCheck(request);
+ try{return await calendarService.action(request.auth?.uid,request.data||{});}
+ catch(error){if(error instanceof HttpsError)throw error;throw new HttpsError('failed-precondition',error.message||'日曆操作失敗');}
+});
+export const calendarWorkSync=onDocumentWritten({document:'workTasks/{id}',retry:true},e=>{
+ const a=e.data?.before.data(),b=e.data?.after.data();
+ if(JSON.stringify([a?.title,a?.due,a?.done,a?.deleted,a?.purging])===JSON.stringify([b?.title,b?.due,b?.done,b?.deleted,b?.purging]))return;
+ return calendarService.syncWork(e.params.id);
+});
+export const calendarOwnerSync=onDocumentWritten({document:'users/{uid}',retry:true},e=>{
+ const a=e.data?.before.data(),b=e.data?.after.data();
+ if(JSON.stringify([a?.role,a?.branchIds,a?.username])===JSON.stringify([b?.role,b?.branchIds,b?.username]))return;
+ return calendarService.syncOwner(e.params.uid);
+});
+export const calendarRequestPush=onDocumentWritten('calendarRequests/{id}',async e=>{
+ const before=e.data?.before.data(),after=e.data?.after.data();
+ const notify=!!after&&(!before||before.status!==after.status);
+ for(const uid of new Set([before?.ownerId,before?.requesterId,after?.ownerId,after?.requesterId].filter(Boolean)))await enqueueRegistered(uid,{calendar:true,notify});
 });

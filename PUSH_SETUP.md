@@ -56,3 +56,20 @@ Eventarc service agent 尚未就緒時，等建立完成再重試同一部署指
 
 <!-- mobile-notification-update-v1 -->
 主管與管理員也接收自己負責據點的候補配對及到期提醒。電腦到「帳號與權限 → 我的負責據點」設定；手機從鈴鐺設定。電腦不顯示鈴鐺。這次背景條件修改須重新部署 functions:notifications，不需重建金鑰。
+
+
+## 日曆功能部署（calendar-v1）
+
+完成網頁更新後，需要部署新版 Firestore 規則和整個 notifications Functions codebase；只更新網頁不會啟用日曆寫入、申請推播與待辦同步。
+
+Cloud Shell 使用原有的 Firebase 管理帳號，不需重建 VAPID 金鑰。取得本次更新後的 main 原始碼，在專案根目錄執行：
+
+```sh
+npx --yes --package firebase-tools firebase deploy --only firestore:rules,functions:notifications --project storeasy-dashboard
+```
+
+部署包含新的 calendarAction、calendarWorkSync、calendarOwnerSync、calendarRequestPush，以及原有推播工作處理器的更新。日曆使用逐月索引與單一欄位查詢，不需新增複合索引。部署不會修改既有倉位、KPI、待辦或候補資料。
+
+所有已核准帳號可使用；私人行程允許主管／管理員查看，但只有建立者可以直接修改。分享僅開放日曆資料，不開放原待辦。只有勾選加入日曆的新待辦會建立連動行程。一般員工背景推播只包含自己的日曆申請與結果，不會因此收到待辦或候補通知。
+
+本次已驗證建置、日曆權限、修改申請、待辦同步、推播計數與桌面／手機操作；實機推播仍須裝置已啟用背景通知。

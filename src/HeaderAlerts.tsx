@@ -6,7 +6,7 @@ import {markWorkRead,unreadThreads} from './work-tasks';
 import NotificationCenter from './NotificationCenter';
 
 export default function HeaderAlerts({
- uid,profile,branches,work,waiting,onWork,onWaiting
+ uid,profile,branches,work,waiting,onWork,onWaiting,calendar,onCalendar
 }:any){
  const global=['admin','supervisor'].includes(profile.role);
  const [assigned,setAssigned]=useState<string[]>([]);
@@ -39,7 +39,7 @@ export default function HeaderAlerts({
   waiting.notification(r)
  );
 
- const count=new Set(notices.map((n:any)=>n.task.id)).size+rows.length;
+ const count=new Set(notices.map((n:any)=>n.task.id)).size+rows.length+(calendar?.count||0);
 
  async function open(
   key:string,fn:()=>Promise<void>,
@@ -62,7 +62,7 @@ export default function HeaderAlerts({
   inbox={close=><section className="notification-inbox"
    aria-label="未讀通知">
    <h3>未讀通知 · {count} 筆</h3>
-   {!count&&<p>目前沒有未讀通知。</p>}
+   {!count&&<p>目前沒有未讀通知。</p>}{calendar?.unread?.map((r:any)=><button type="button" className="notification-inbox-row" key={'calendar'+r.id} onClick={()=>{onCalendar?.();close();}}><strong>日曆 · {r.eventTitle}</strong><span>{r.status==='pending'?'有修改申請待審核':'修改申請已有結果'}</span></button>)}
 
    {notices.map(({task,thread}:any)=>
     <button type="button" className="notification-inbox-row"

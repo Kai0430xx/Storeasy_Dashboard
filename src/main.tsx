@@ -1,3 +1,6 @@
+import {CalendarDays} from 'lucide-react';
+import CalendarPage from './CalendarPage';
+import {useCalendarAlerts} from './calendar-client';
 import {activityCopyDraft} from './activity-copy.js';
 // activity-copy-v1
 import BulkUnits,{BulkUnitCheck} from "./BulkUnits";
@@ -158,6 +161,8 @@ function App() {
   const branches = [...branchRows].sort(compareBranches);
  const initialBranchReady=useInitialBranch(user?.uid,profile,branches,setBranchId);
   const work = useWorkTasks(profile);
+  const calendarAlerts=useCalendarAlerts(user?.uid,!!profile&&['admin','supervisor','manager','employee'].includes(profile.role));
+  const [calendarOpenRequests,setCalendarOpenRequests]=useState(0);
   // work-account-list-v1
   const [workBranchId, setWorkBranchId] = useState("all");
   useEffect(() => {
@@ -275,7 +280,7 @@ function App() {
   useEffect(() => {
     setData({});
     const stops: (() => void)[] = [];
-    if (page === "cheers" || page==="users"||page==="work"||page==="manual" || page === "waiting") return;
+    if (page === "calendar" || page === "cheers" || page==="users"||page==="work"||page==="manual" || page === "waiting") return;
  if(!initialBranchReady)return;
 
     for (const branch of branches.filter(
@@ -574,6 +579,7 @@ function App() {
     ["units", "倉位管理", Warehouse],
     ["activities", "活動優惠", Tags],
     ["imports", "資料匯入", Upload],
+    ["calendar", "日曆", CalendarDays],
     ["targets", "目標與轉介", LayoutDashboard],
     ...(canWrite ? [["waiting", "候補清單", Users]] : []),
     ...(canWrite ? [["work", "待辦事項", Check]] : []),
@@ -609,6 +615,7 @@ function App() {
               <Icon size={19} />
               {label}
               {id === "waiting" && waiting.hasUnread && <i className={"dot waiting-dot-"+waiting.alertTone} aria-label={waiting.alertTone==="red"?"候補清單有到期提醒":"候補清單有未讀提醒"} />}
+              {id === "calendar" && calendarAlerts.count>0 && <i className="dot" aria-label="日曆有未處理申請或新結果"/>}
               {id === "work" && work.hasUnread && <i className="dot" aria-label="待辦事項有未讀變動" />}
               {id === "users" &&
                 users.some((item) => item.role === "pending") &&
@@ -666,7 +673,7 @@ function App() {
            ):null
          }
         /><div className="header-right">
-            {canWrite&&profile&&<HeaderAlerts uid={user.uid} branches={branches} profile={profile} work={work} waiting={waiting} onWaiting={(row:any)=>{setBranchId("all");setWaitingFocus(row.id);setPage("waiting");}} onWork={(task:any,thread:string)=>{setBranchId("all");setWorkFocus({id:task.id,thread,nonce:Date.now()});setPage("work");}}/>}
+            {profile&&["admin","supervisor","manager","employee"].includes(profile.role)&&<HeaderAlerts calendar={calendarAlerts} onCalendar={()=>{setCalendarOpenRequests(Date.now());setPage("calendar");}} uid={user.uid} branches={branches} profile={profile} work={work} waiting={waiting} onWaiting={(row:any)=>{setBranchId("all");setWaitingFocus(row.id);setPage("waiting");}} onWork={(task:any,thread:string)=>{setBranchId("all");setWorkFocus({id:task.id,thread,nonce:Date.now()});setPage("work");}}/>}
 <span className="live-dot" /> 即時同步
             <span className="date">
               {today().replaceAll("-", " / ")}
@@ -749,7 +756,7 @@ function App() {
                     )?.[1] as string}
                   </h1>
                   <p>
-                    {page === "cheers" ? "為各據點設定最上方的鼓勵文字。" : page === "manual" ? "依頁面查看功能說明與操作步驟。":page==="dashboard"
+                    {page === "calendar" ? "安排私人或分享行程，查看修改申請與待辦連動。" : page === "cheers" ? "為各據點設定最上方的鼓勵文字。" : page === "manual" ? "依頁面查看功能說明與操作步驟。":page==="dashboard"
                       ? "掌握每個據點的出租表現，讓營運決策更清楚。"
                       : page === "units"
                         ? "管理倉位現況，記錄每一次承租、續約與退租。"
@@ -761,7 +768,7 @@ function App() {
                   </p>
                 </div>
 
-                {page !== "cheers" && page !== "users" && page !== "manual" && (
+                {page !== "calendar" && page !== "cheers" && page !== "users" && page !== "manual" && (
                   <div className="filters">
                     <select
                       aria-label="選擇據點"
@@ -1101,6 +1108,7 @@ function App() {
                 />
                 <LightInsights branches={visible} events={events} month={month} />
               </>}
+              {page === "calendar" && <CalendarPage profile={profile} branches={branches} alerts={calendarAlerts} openRequests={calendarOpenRequests}/>}
               {page === "work" && canWrite && <WorkTasks focus={workFocus} onFocus={()=>setWorkFocus(null)} profile={profile} directoryBranches={branches} branches={branches.filter(b=>!b.archived)} branchId={workBranchId} peopleUsers={users} onSelectBranch={setWorkBranchId} {...work} />}
               {page === "targets" && <Targets
                 branches={branches.filter(b=>!b.archived && (branchId === "all" || b.id === branchId))}

@@ -2,7 +2,7 @@
 import {ECDH} from 'node:crypto';
 
 export const roles = ['admin','supervisor','manager'];
-export const enabled = p => roles.includes(p?.role);
+export const enabled = p => [...roles,'employee'].includes(p?.role);
 export const globalProfile = p => ['admin','supervisor'].includes(p?.role);
 export const intersects = (a=[],b=[]) => a.some(id=>b.includes(id));
 export const millis = v => Number(
@@ -20,7 +20,7 @@ export const day = () => new Intl.DateTimeFormat('en-CA',{
 }).format(new Date());
 
 export function workVisible(task,uid,p,assignment){
-  return enabled(p)&&(
+  return roles.includes(p?.role)&&(
     globalProfile(p)||
     task.createdBy===uid||
     intersects(task.branchIds,p.branchIds)||
@@ -37,7 +37,7 @@ export const workNotificationVisible = (
 );
 
 export const waitingNotificationVisible = (row,uid,p) =>
-  enabled(p)&&intersects(row.branchIds,p.branchIds);
+  roles.includes(p?.role)&&intersects(row.branchIds,p.branchIds);
 
 export const calendarDate = s =>
   /^20\d{2}-\d{2}-\d{2}$/.test(s||'')&&

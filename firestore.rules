@@ -2,6 +2,14 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+  // calendar-v1
+  function calendarUser(){return activeUser() && profile().role in ['admin','supervisor','manager','employee'];}
+  function calendarView(d){return calendarUser() && (globalAccess() || d.ownerId==request.auth.uid || request.auth.uid in d.viewerIds);}
+  match /calendarEvents/{id}{allow read: if calendarView(resource.data); allow write: if false;}
+  match /calendarMonths/{month}/events/{id}{allow read: if calendarView(resource.data); allow write: if false;}
+  match /calendarCategories/{id}{allow read: if calendarUser() && (globalAccess() || resource.data.ownerId==request.auth.uid); allow write: if false;}
+  match /calendarRequests/{id}{allow read: if calendarUser() && (resource.data.ownerId==request.auth.uid || resource.data.requesterId==request.auth.uid); allow write: if false;}
+
     function signedIn() {
       return request.auth != null;
     }
@@ -97,7 +105,7 @@ service cloud.firestore {
 
 // background-push-v1: device registration is callable-only.
 match /pushDevices/{deviceId} {
-  allow get: if workUser() && resource.data.uid==request.auth.uid;
+  allow get: if calendarUser() && resource.data.uid==request.auth.uid;
   allow list,create,update,delete: if false;
 }
 match /pushStatus/{uid} {
