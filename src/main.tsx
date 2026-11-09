@@ -579,10 +579,10 @@ function App() {
     ["units", "倉位管理", Warehouse],
     ["activities", "活動優惠", Tags],
     ["imports", "資料匯入", Upload],
-    ["calendar", "日曆", CalendarDays],
     ["targets", "目標與轉介", LayoutDashboard],
     ...(canWrite ? [["waiting", "候補清單", Users]] : []),
     ...(canWrite ? [["work", "待辦事項", Check]] : []),
+    ["calendar", "日曆", CalendarDays],
     ...(global ? [["cheers", "信心喊話", Megaphone],["users", "帳號與權限", Users]] : []),
   ];
 
