@@ -23,3 +23,12 @@
 /* calendar-optional-end-v4 */
 .calendar-date-heading{display:flex;align-items:center;gap:3px;min-width:0;height:28px}.calendar-date-heading .calendar-date{flex:0 0 28px;margin:0}.calendar-holiday-name{display:block;min-width:0;flex:1;color:#c62828;font-size:11px;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media(max-width:760px){.calendar-date-heading{height:24px;gap:1px}.calendar-date-heading .calendar-date{flex-basis:20px;width:20px;height:24px;font-size:12px}.calendar-holiday-name{font-size:10px}}
+
+/* calendar-sidebar-v5 */
+.calendar-category-list{display:flex;flex-direction:column;gap:6px;min-width:0;width:100%}
+.calendar-category-row{display:flex;align-items:center;gap:6px;min-width:0}
+.calendar-category-row .calendar-check{flex:1;min-width:0;margin:4px 0!important;gap:6px}
+.calendar-category-row .calendar-check span{min-width:0;overflow-wrap:anywhere}
+.calendar-category-row .calendar-color{margin-right:0}
+.calendar-category-row>.text-button{flex-shrink:0;padding:6px 2px}
+@media(max-width:1100px){.calendar-category-list{flex-basis:100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:4px 14px}}
