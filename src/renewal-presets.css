@@ -2,3 +2,16 @@
 
 /* renewal-month-dropdown-v2 */
 .renewal-presets select{width:100%;min-width:0}
+
+/* renewal-preview-no-inner-scroll-v3 */
+.modal fieldset.renewal-presets,
+.renewal-presets{
+  max-height:none;
+  height:auto;
+  overflow:visible;
+}
+.modal.bulk-unit-modal .bulk-unit-card>fieldset{
+  max-height:none;
+  height:auto;
+  overflow:visible;
+}

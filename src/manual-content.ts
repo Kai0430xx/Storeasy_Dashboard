@@ -746,3 +746,6 @@ manualPages.find(p=>p.id==='units')?.topics.push({title:'續約下拉選擇1至1
 
 // renewal-month-dropdown-v2-manual
 manualPages.find(p=>p.id==='units')?.topics.push({title:'續約月數下拉選單',steps:['單筆及批次續約改用下拉選單，提供1個月至12個月；不再顯示月租、季租、半年租、年租四個按鈕。','選擇開始日與月數後查看預覽，再按「確定套用」帶入租期；特殊租期仍可在下方手動輸入。','月底規則不變：目標月份沒有同日，先取月底再往前一天；1/31月租到2/27，閏年到2/28。'],result:'套用租期不會直接儲存續約，也不改收款日期、付款狀態或活動。'});
+
+// renewal-preview-no-inner-scroll-v3-manual
+manualPages.find(p=>p.id==='units')?.topics.push({title:'續約預覽直接顯示',steps:['選擇續約開始日與1至12個月後，租期預覽及「確定套用」直接顯示在月數選單下方。','快速選擇租期區塊自動展開，不再有區塊內的獨立捲軸；單筆及批次續約皆適用。','整個續約視窗仍可正常捲動，以查看付款狀態、活動及最後的確認儲存。'],result:'只調整版面，不改租期計算、資料、付款狀態或送出流程。'});
