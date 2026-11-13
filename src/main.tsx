@@ -1,3 +1,4 @@
+import RenewalLeaseField from './RenewalLeaseField';
 import {CalendarDays} from 'lucide-react';
 import CalendarPage from './CalendarPage';
 import {useCalendarAlerts} from './calendar-client';
@@ -1917,11 +1918,8 @@ function App() {
                   </label>
                 )}
                 {modal.type !== "exit" && (
-                  <label>
-                    {modal.type === "renew" ? "新的租期" : "租期"}
-                    <input aria-label={modal.type === "renew" ? "新的租期" : "租期"} name="leasePeriod" required placeholder="2026/10/08－2027/04/07" autoComplete="off" />
-                    <small className="hint">請貼上完整起訖日期，例如 2026/10/08－2027/04/07。</small>
-                  </label>
+                  modal.type === "renew" ? <RenewalLeaseField key={`${modal.unit.branchId}/${modal.unit.code}`} unit={modal.unit} disabled={busy}/> :
+                  <label>租期<input aria-label="租期" name="leasePeriod" required placeholder="2026/10/08－2027/04/07" autoComplete="off"/><small className="hint">請貼上完整起訖日期，例如 2026/10/08－2027/04/07。</small></label>
                 )}
                 {modal.type === "renew" && <div className="renewal-payment-option">
  <label className="renewal-payment-toggle">

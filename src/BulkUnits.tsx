@@ -1,3 +1,4 @@
+import RenewalLeaseField from './RenewalLeaseField';
 
 import {createContext,useContext,useEffect,useState} from 'react';
 import {collection,onSnapshot,query,where} from 'firebase/firestore';
@@ -280,12 +281,7 @@ export default function BulkUnits({visibleUnits,profile,children}:{
        </label>
 
        {draft.type==='renew'?<>
-        <label>新租期
-         <input aria-label={`${row.unit.code} 新租期`}
-          placeholder="2026/10/25－2027/01/24" value={row.leasePeriod}
-          onChange={e=>patch(row.operationId,{leasePeriod:e.target.value})}
-         /><small>{term}</small>
-        </label>
+        <RenewalLeaseField unit={row.unit} value={row.leasePeriod} onChange={leasePeriod=>patch(row.operationId,{leasePeriod})} disabled={locked} label="新租期" ariaLabel={`${row.unit.code} 新租期`} hint={term}/>
         <label>收款狀態
          <select aria-label={`${row.unit.code} 收款狀態`}
           value={row.unpaid?'unpaid':'paid'}
